@@ -1,0 +1,23 @@
+model {
+  bdl         1.0
+  types       adl-type/1.0
+  expressions adl-expr/1.0
+  definition  "2026-11-02.1"
+}
+business BorrowBoxBusiness #b-1001 {
+  description "People lend their possessions through shared understanding of availability, responsibility and returns."
+  purpose { "make borrowing between friends effortless and accountable" }
+  modality { epistemic stated }
+  provenance { source domain-expert, assertedBy "BorrowBox vision", assertedOn 2026-11-02 }
+  domain Lending #d-1001 {
+    purpose { "coordinate temporary custody of privately owned items" }
+    capability ReserveItem #c-1001 {
+      purpose { "request and authorize borrowing for selected dates" }
+    }
+    capability ReturnItem #c-1002 {
+      purpose { "restore custody and record return condition" }
+    }
+  }
+  actor Owner [person] #a-1001 { }
+  actor Borrower [person] #a-1002 { }
+}
