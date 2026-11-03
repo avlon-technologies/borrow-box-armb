@@ -8,6 +8,8 @@ their circles.
 
 Avlon Technologies project.
 
+> **Experiment closed (2026-11-03).** This repository is Arm B (with Continuum) of the BorrowBox experiment. It is preserved exactly as evaluated, known defects included. See [`docs/EXPERIMENT-CLOSEOUT.md`](docs/EXPERIMENT-CLOSEOUT.md) and the [final experiment report](https://github.com/avlon-technologies/continuum-architecture/blob/main/experiments/2026-11-02-borrowbox-vision-fidelity/RESULTS.md).
+
 ## Quick start
 
 Requires **Node.js 24 or newer** (it uses Node's built-in SQLite). No other services, accounts or keys.
