@@ -60,11 +60,11 @@ export function seed(db, { uploadsDir, timeZone = DEFAULT_TIME_ZONE, realNow = n
   let clock = new Date(realNow);
   const ctx = { db, timeZone, uploadsDir, now: () => clock, today: () => todayIn(timeZone, clock) };
   const today = todayIn(timeZone, realNow);
+  // Moves the clock to a daytime hour on a community calendar day, never past the real now.
   const at = (dayOffset, hour = 10) => {
-    const d = new Date(realNow);
-    d.setTime(d.getTime() + dayOffset * 86400000);
-    d.setUTCHours(hour + 5, 0, 0, 0); // daytime in North American zones
-    clock = d;
+    const d = new Date(`${addDays(today, dayOffset)}T00:00:00Z`);
+    d.setUTCHours(hour + 5); // roughly local daytime in North American zones
+    clock = d > realNow ? new Date(realNow.getTime() - 60000) : d;
   };
   const day = (n) => addDays(today, n);
   const person = (id) => ({ id });

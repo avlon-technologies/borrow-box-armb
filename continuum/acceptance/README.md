@@ -30,17 +30,17 @@ export function createAdapter({ createFakeProvider, env }) {
 | `extension.acceptExpectRefusal` | then | `as`, `ext`, `status` | 1 scenario |
 | `extension.propose` | then, when | `as`, `ext`, `ref`, `to` | 1 scenario |
 | `item.hide` | when | `as`, `item` | 1 scenario |
-| `loan.approved` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 2 scenarios |
+| `loan.approved` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 1 scenario |
 | `loan.borrowed` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 1 scenario |
 | `loan.dueDate` | then | `date`, `ref` | 1 scenario |
 | `loan.evidenceFrom` | then | `authors`, `disputed`, `ref` | 1 scenario |
 | `loan.status` | then | `ref`, `status` | 3 scenarios |
-| `request.act` | when | `action`, `as`, `disagrees`, `note`, `ref` | 1 scenario |
+| `request.act` | when | `action`, `as`, `disagrees`, `note`, `ref` | 2 scenarios |
 | `request.actExpectRefusal` | then | `action`, `as`, `ref`, `status` | 1 scenario |
 | `request.approveConcurrently` | when | `as`, `refs` | 1 scenario |
 | `request.countFor` | then | `as`, `count`, `from`, `item` | 1 scenario |
 | `request.exactlyOneApproved` | then | `refs` | 1 scenario |
-| `request.submit` | given, when | `as`, `from`, `item`, `ref`, `to` | 3 scenarios |
+| `request.submit` | given, when | `as`, `from`, `item`, `ref`, `to` | 4 scenarios |
 | `request.submitExpectRefusal` | then, when | `as`, `from`, `item`, `status`, `to` | 2 scenarios |
 | `request.submitTwiceSameKey` | when | `as`, `from`, `item`, `ref`, `to` | 1 scenario |
 | `system.restart` | when | — | 1 scenario |
@@ -49,18 +49,18 @@ export function createAdapter({ createFakeProvider, env }) {
 - `extension.accept` — "Maya accepts"
 - `extension.acceptExpectRefusal` — "Maya's acceptance is refused because of Jo"
 - `extension.propose` — "Sam asks for day 5 instead" / "Sam asks to keep it until day 7"
-- `item.hide` — "Maya hides the kayak"
-- `loan.approved` — "Jo has it approved from day 6" / "Sam has Maya's kayak approved"
+- `item.hide` — "Maya hides the guitar"
+- `loan.approved` — "Sam has Maya's guitar approved"
 - `loan.borrowed` — "Sam holds Maya's projector until day 3"
 - `loan.dueDate` — "the loan is now due on day 5"
 - `loan.evidenceFrom` — "both accounts remain and the disagreement is recorded"
 - `loan.status` — "Sam's reservation is untouched" / "it is still pending" / "the loan is complete"
-- `request.act` — "Maya approves" / "Maya confirms and disagrees" / "Maya marks it ready" / "Sam confirms pickup" / "Sam starts the return"
+- `request.act` — "Maya approves" / "Maya approves Jo's request before answering Sam" / "Maya confirms and disagrees" / "Maya marks it ready" / "Sam confirms pickup" / "Sam starts the return"
 - `request.actExpectRefusal` — "Jo, who does not own it, cannot approve" / "Maya cannot cancel Sam's request"
 - `request.approveConcurrently` — "Maya approves both at the same moment"
 - `request.countFor` — "there is exactly one such request"
 - `request.exactlyOneApproved` — "exactly one is approved and the other is still pending"
-- `request.submit` — "Jo requests Maya's tent for days 12-15" / "Sam requests Maya's drill from today" / "Sam requests Maya's tent" / "Sam requests Maya's tent for days 10-13"
+- `request.submit` — "Jo has asked for it from day 6" / "Jo requests Maya's tent for days 12-15" / "Sam requests Maya's drill from today" / "Sam requests Maya's tent" / "Sam requests Maya's tent for days 10-13"
 - `request.submitExpectRefusal` — "Jo cannot request it" / "Maya asks to borrow her own tent"
 - `request.submitTwiceSameKey` — "Sam's request is sent twice with the same key"
 - `system.restart` — "the library restarts"
@@ -70,7 +70,7 @@ export function createAdapter({ createFakeProvider, env }) {
 
 ### `extension-recheck`
 
-An extension that would collide with a later commitment is refused on acceptance; one that fits is accepted.
+An extension proposed while the days were free is refused on acceptance once those days are committed to someone else; a shorter one that fits is accepted.
 
 - verifies: `::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts` (Requirement), `::BorrowBox.Lending.Library.BorrowingService` (Service)
 - realizes the declared Test `::BorrowBox.ExtensionTests`
@@ -79,10 +79,11 @@ An extension that would collide with a later commitment is refused on acceptance
 **given**
 - the library is running with the demo seed `[system.start]`
 - Sam holds Maya's projector until day 3 `[loan.borrowed]`
-- Jo has it approved from day 6 `[loan.approved]`
+- Jo has asked for it from day 6 `[request.submit]`
 
 **when**
 - Sam asks to keep it until day 7 `[extension.propose]`
+- Maya approves Jo's request before answering Sam `[request.act]`
 
 **then**
 - Maya's acceptance is refused because of Jo `[extension.acceptExpectRefusal]`
@@ -147,10 +148,10 @@ Hiding an item refuses new requests while an existing approved reservation stays
 
 **given**
 - the library is running with the demo seed `[system.start]`
-- Sam has Maya's kayak approved `[loan.approved]`
+- Sam has Maya's guitar approved `[loan.approved]`
 
 **when**
-- Maya hides the kayak `[item.hide]`
+- Maya hides the guitar `[item.hide]`
 
 **then**
 - Jo cannot request it `[request.submitExpectRefusal]`

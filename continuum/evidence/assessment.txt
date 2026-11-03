@@ -1,0 +1,29 @@
+package    avlon.borrowbox cycle-1
+attestation sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42
+Conformance assessment · avlon.borrowbox
+
+  NO LEVEL ATTAINED
+  L1 Model Conformance: model/language-version-unsupported
+  0 errors · 0 warnings
+
+  Level                            Result
+  L1  Model Conformance
+      Undetermined · model/language-version-unsupported
+  L2  Implementation Conformance   Blocked · requires L1 attainment
+  L3  Behavioural Conformance      Blocked · requires L2 attainment
+  L4  Runtime Conformance          Blocked · requires L3 attainment
+
+Assessment provenance
+
+  Policy          aacs-standard/1 · standard default
+  Policy digest
+    sha256:1573ad3585b48249e6649cd5728de803f79d6c3665c599669642c7f2f655ddd8
+  Specification   aacs/1.0.0-draft.2
+  Profile         aacs-mvp/1
+  Verifier
+    0.2.0+build.5f3aaed9a9d18d8d4d0a48b1111783b26114704944a8357b6934fff6b925b0b4
+  Calibration
+    sha256:9a31b3b3202bfdf7ff339cec8d852f12ed99d7b0258768ce6e586a4334c053ab
+  Attestation
+    sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42
+changeState sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f

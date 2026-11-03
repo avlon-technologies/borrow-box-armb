@@ -18,12 +18,12 @@
       "args": {
         "owner": "maya",
         "as": "sam",
-        "item": "kayak",
+        "item": "guitar",
         "from": "+4",
         "to": "+5",
         "ref": "k"
       },
-      "text": "Sam has Maya's kayak approved"
+      "text": "Sam has Maya's guitar approved"
     }
   ],
   "when": [
@@ -31,9 +31,9 @@
       "step": "item.hide",
       "args": {
         "as": "maya",
-        "item": "kayak"
+        "item": "guitar"
       },
-      "text": "Maya hides the kayak"
+      "text": "Maya hides the guitar"
     }
   ],
   "then": [
@@ -41,7 +41,7 @@
       "step": "request.submitExpectRefusal",
       "args": {
         "as": "jo",
-        "item": "kayak",
+        "item": "guitar",
         "from": "+9",
         "to": "+10",
         "status": 409

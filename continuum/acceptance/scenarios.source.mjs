@@ -61,15 +61,18 @@ const scenarios = [
   },
   {
     name: 'extension-recheck',
-    purpose: 'An extension that would collide with a later commitment is refused on acceptance; one that fits is accepted.',
+    purpose: 'An extension proposed while the days were free is refused on acceptance once those days are committed to someone else; a shorter one that fits is accepted.',
     verifies: [`${S}.ReservationCoordination.ExtensionsRecheckConflicts`, `${S}.Library.BorrowingService`],
     test: '::BorrowBox.ExtensionTests',
     given: [
       start,
       { step: 'loan.borrowed', args: { owner: 'maya', as: 'sam', item: 'projector', from: '+0', to: '+3', ref: 'x' }, text: "Sam holds Maya's projector until day 3" },
-      { step: 'loan.approved', args: { owner: 'maya', as: 'jo', item: 'projector', from: '+6', to: '+8', ref: 'y' }, text: 'Jo has it approved from day 6' },
+      { step: 'request.submit', args: { as: 'jo', item: 'projector', from: '+6', to: '+8', ref: 'y' }, text: 'Jo has asked for it from day 6' },
     ],
-    when: [{ step: 'extension.propose', args: { as: 'sam', ref: 'x', to: '+7', ext: 'e1' }, text: 'Sam asks to keep it until day 7' }],
+    when: [
+      { step: 'extension.propose', args: { as: 'sam', ref: 'x', to: '+7', ext: 'e1' }, text: 'Sam asks to keep it until day 7' },
+      { step: 'request.act', args: { as: 'maya', ref: 'y', action: 'approve' }, text: "Maya approves Jo's request before answering Sam" },
+    ],
     then: [
       { step: 'extension.acceptExpectRefusal', args: { as: 'maya', ext: 'e1', status: 409 }, text: "Maya's acceptance is refused because of Jo" },
       { step: 'extension.propose', args: { as: 'sam', ref: 'x', to: '+5', ext: 'e2' }, text: 'Sam asks for day 5 instead' },

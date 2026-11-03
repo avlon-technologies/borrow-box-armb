@@ -1,0 +1,9 @@
+document   continuum/business.bdl (bdl)
+language   continuum-bdl/1
+valid      yes
+ledger     5 entries
+0 errors, 2 other diagnostics
+  warning bdl/analytical/no-declared-performer — ac-1017
+          action: ac-1017
+  warning bdl/analytical/no-declared-performer — ac-1018
+          action: ac-1018

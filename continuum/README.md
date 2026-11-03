@@ -34,7 +34,7 @@ The implementation realizes all of the above — and is not in this package.
 | attestation | `sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42` |
 | changeState | `sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f` |
 | environment | `LocalDevelopment` |
-| scenarios | 6, resolved against the model; no adapter ships — the implementation writes one and runs them with `package run` |
+| scenarios | 6, resolved against the model; execute them with `package run` (adapter `acceptance/adapter.mjs`) |
 | compiler warnings | 0 |
 
 Start with `GOAL.md`, then `IMPLEMENTATION.md`. Verify the package before trusting it:

@@ -1,0 +1,10 @@
+pass  extension-recheck
+pass  full-loan-journey
+pass  hidden-item-keeps-reservations
+pass  overlapping-approval-refused
+pass  self-borrow-refused
+pass  state-survives-restart
+6 passed, 0 failed, 6 executed
+adapter    acceptance/adapter.mjs sha256:9b66bea7b91c…
+recorded   C:\projects\avlon\borrow-box-armb\.continuum\runs.json (a run, for continuum status; not an acceptance)
+next       continuum package accept continuum --as <you> --verified-against HEAD
