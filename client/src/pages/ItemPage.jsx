@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useApp } from '../App.jsx';
 import Calendar from '../components/Calendar.jsx';
-import { availability } from '../components/ItemCard.jsx';
+import { availability, CircleChip } from '../components/ItemCard.jsx';
+import AudiencePicker from '../components/AudiencePicker.jsx';
 import { Avatar, Button, Chip, ErrorState, FormError, Photo, Spinner, useLoad, useSubmit } from '../components/ui.jsx';
 import { daysInclusive, range, plural, addDays } from '../format.js';
 import { chip } from '../loanText.js';
@@ -75,6 +76,33 @@ function RequestForm({ item, today, onDone }) {
   );
 }
 
+function AudiencePanel({ item, reload }) {
+  const { toast } = useApp();
+  const initial = { audience: item.audience, circleIds: item.circles.map((c) => c.id) };
+  const [value, setValue] = useState(initial);
+  const { busy, error, setError, run } = useSubmit();
+  const changed = value.audience !== initial.audience || value.circleIds.slice().sort().join() !== initial.circleIds.slice().sort().join();
+  const save = async () => {
+    if (value.audience === 'circles' && value.circleIds.length === 0) return setError({ message: 'Pick at least one circle to share it with.' });
+    const res = await run((key) => api.setAudience(item.id, value, key));
+    if (res) {
+      toast(res.item.audience === 'circles' ? 'Now just for your circles. Anything already agreed carries on.' : 'Open to everyone again.');
+      reload({ quiet: true });
+    }
+  };
+  // Circles the item is shared with but the owner has since left still show, so they can be removed.
+  const circles = [...item.myCircles, ...item.circles.filter((c) => !item.myCircles.some((m) => m.id === c.id))];
+  return (
+    <section className="panel" aria-labelledby="aud-h">
+      <h2 id="aud-h" className="h3">Who can borrow it</h2>
+      <AudiencePicker value={value} onChange={(v) => { setValue(v); setError(null); }} circles={circles} idPrefix="edit" quietLegend />
+      <p className="muted small">Changing this only affects new requests. Requests and loans you already have stay exactly as they are.</p>
+      <FormError error={error} />
+      <Button busy={busy} disabled={!changed} className="btn" busyLabel="Saving…" onClick={save}>Save who can borrow it</Button>
+    </section>
+  );
+}
+
 function OwnerPanel({ item, reload }) {
   const { toast } = useApp();
   const { busy, error, run } = useSubmit();
@@ -105,7 +133,10 @@ function OwnerPanel({ item, reload }) {
               <li key={r.id}>
                 <Link to={`/loans/${r.id}`} className="mini-row">
                   <Avatar person={{ name: r.borrowerName, color: r.borrowerColor }} size={28} />
-                  <span><strong>{r.borrowerName.split(' ')[0]}</strong> · {range(r.start, r.end)}</span>
+                  <span>
+                    <strong>{r.borrowerName.split(' ')[0]}</strong> · {range(r.start, r.end)}
+                    {r.outsideCircles && <small className="muted block">Asked while in a shared circle; no longer is</small>}
+                  </span>
                   <Chip tone={c.tone}>{c.label}</Chip>
                 </Link>
               </li>
@@ -134,6 +165,7 @@ export default function ItemPage() {
           <div className="title-row">
             <h1 className="display">{item.title}</h1>
             <Chip tone={a.tone}>{a.label}</Chip>
+            <CircleChip item={item} />
           </div>
           <div className="owner-card">
             <Avatar person={item.owner} size={44} />
@@ -163,7 +195,7 @@ export default function ItemPage() {
           </section>
         </div>
         <aside className="item-side">
-          {item.isMine ? <OwnerPanel item={item} reload={reload} /> : (
+          {item.isMine ? <><OwnerPanel item={item} reload={reload} /><AudiencePanel key={item.updatedAt} item={item} reload={reload} /></> : (
             <>
               {item.myRequests.length > 0 && (
                 <div className="panel panel-soft" role="note">
@@ -178,6 +210,8 @@ export default function ItemPage() {
               )}
               {item.hidden ? (
                 <div className="panel"><h2 className="h3">Not taking new requests</h2><p className="muted">{item.owner.firstName} has paused lending this for now. Anything already agreed still stands.</p></div>
+              ) : !item.canRequest ? (
+                <div className="panel"><h2 className="h3">Just for {item.owner.firstName}'s circles</h2><p className="muted">{item.owner.firstName} lends this only within circles you're not in right now. Anything you already arranged still stands.</p></div>
               ) : <RequestForm item={item} today={config.today} onDone={reload} />}
             </>
           )}

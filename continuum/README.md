@@ -31,10 +31,10 @@ The implementation realizes all of the above — and is not in this package.
 | | |
 |---|---|
 | semantic package | `avlon.borrowbox` `cycle-1` (`adl/1.7`) |
-| attestation | `sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42` |
-| changeState | `sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f` |
+| attestation | `sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df` |
+| changeState | `sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7` |
 | environment | `LocalDevelopment` |
-| scenarios | 6, resolved against the model; execute them with `package run` (adapter `acceptance/adapter.mjs`) |
+| scenarios | 8, resolved against the model; execute them with `package run` (adapter `acceptance/adapter.mjs`) |
 | compiler warnings | 0 |
 
 Start with `GOAL.md`, then `IMPLEMENTATION.md`. Verify the package before trusting it:

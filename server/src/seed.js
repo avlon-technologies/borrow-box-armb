@@ -8,6 +8,7 @@ import { openDatabase, inTransaction } from './db.js';
 import { DEFAULT_TIME_ZONE, todayIn, addDays } from './dates.js';
 import * as catalog from './catalog.js';
 import * as borrowing from './borrowing.js';
+import * as circles from './circles.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -85,6 +86,24 @@ export function seed(db, { uploadsDir, timeZone = DEFAULT_TIME_ZONE, realNow = n
   });
 
   const maya = person('p-maya'), sam = person('p-sam'), jo = person('p-jo'), priya = person('p-priya');
+
+  // 0. Lending circles. Sam's bike goes only to Riverside Neighbours; Jo has an invitation waiting,
+  // so the bike appears for her once she accepts.
+  at(-50, 19);
+  const riverside = tx(() => circles.createCircle(ctx, maya, { name: 'Riverside Neighbours', description: 'Neighbours around Riverside park, lending tents, tools and games to each other.' }));
+  tx(() => circles.inviteToCircle(ctx, maya, riverside, { personId: 'p-priya' }));
+  tx(() => circles.inviteToCircle(ctx, maya, riverside, { personId: 'p-sam' }));
+  at(-49, 8); tx(() => circles.acceptInvitation(ctx, priya, riverside));
+  at(-49, 12); tx(() => circles.acceptInvitation(ctx, sam, riverside));
+  at(-48, 10);
+  tx(() => catalog.setItemAudience(ctx, sam, items.bike, { audience: 'circles', circleIds: [riverside] }));
+  tx(() => catalog.setItemAudience(ctx, maya, items.tent, { audience: 'everyone', circleIds: [riverside] }));
+  at(-47, 20);
+  const supper = tx(() => circles.createCircle(ctx, jo, { name: 'Supper Club', description: 'We cook for each other once a month and share the big pots.' }));
+  tx(() => circles.inviteToCircle(ctx, jo, supper, { personId: 'p-maya' }));
+  at(-46, 9); tx(() => circles.acceptInvitation(ctx, maya, supper));
+  tx(() => catalog.setItemAudience(ctx, jo, items['dutch-oven'], { audience: 'everyone', circleIds: [supper] }));
+  at(-2, 18); tx(() => circles.inviteToCircle(ctx, sam, riverside, { personId: 'p-jo' }));
 
   // 1. A finished loan with both accounts of condition and a preserved disagreement.
   at(-30, 9);

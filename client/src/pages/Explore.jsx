@@ -13,6 +13,7 @@ export default function Explore() {
   const category = params.get('category') ?? '';
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
+  const circlesOnly = params.get('circles') === '1';
   const [text, setText] = useState(q);
 
   // Debounce typing into the URL (so filters survive refresh and back/forward).
@@ -30,10 +31,10 @@ export default function Explore() {
 
   const validRange = from && (!to || to >= from);
   const { data: items, loading, error, reload } = useLoad(
-    () => api.items({ q, category, from: validRange ? from : '', to: validRange ? (to || from) : '' }),
-    [q, category, from, to],
+    () => api.items({ q, category, circles: circlesOnly ? '1' : '', from: validRange ? from : '', to: validRange ? (to || from) : '' }),
+    [q, category, from, to, circlesOnly],
   );
-  const filtered = q || category || from;
+  const filtered = q || category || from || circlesOnly;
   const visible = items?.filter((i) => !i.isMine) ?? [];
   const mine = items?.filter((i) => i.isMine && !i.hidden) ?? [];
 
@@ -51,6 +52,7 @@ export default function Explore() {
 
       <div className="filters">
         <div className="chips-scroll" role="group" aria-label="Category">
+          <button className={`filter-chip filter-circle ${circlesOnly ? 'on' : ''}`} aria-pressed={circlesOnly} onClick={() => update({ circles: circlesOnly ? '' : '1' })}><span aria-hidden="true">🫶 </span>From my circles</button>
           <button className={`filter-chip ${!category ? 'on' : ''}`} aria-pressed={!category} onClick={() => update({ category: '' })}>Everything</button>
           {(config?.categories ?? []).map((c) => (
             <button key={c} className={`filter-chip ${category === c ? 'on' : ''}`} aria-pressed={category === c} onClick={() => update({ category: category === c ? '' : c })}>{c}</button>
@@ -84,7 +86,7 @@ export default function Explore() {
           title={filtered ? 'Nothing matches just yet' : 'The shelf is empty for now'}
           action={filtered ? <button className="btn" onClick={() => { setText(''); setParams({}, { replace: true }); }}>Clear filters</button> : <Link className="btn btn-primary" to="/items/new">List something to lend</Link>}
         >
-          {filtered ? 'Try a different word, another category or other dates.' : 'Be the first to share something.'}
+          {circlesOnly && !q && !category && !from ? <>Nothing shared in your circles yet. <Link to="/circles">Visit your circles</Link> to invite friends or share something.</> : filtered ? 'Try a different word, another category or other dates.' : 'Be the first to share something.'}
         </EmptyState>
       ) : (
         <ul className={`grid ${loading ? 'is-loading' : ''}`}>

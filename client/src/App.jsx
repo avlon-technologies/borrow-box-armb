@@ -9,6 +9,8 @@ import ItemForm from './pages/ItemForm.jsx';
 import Activity from './pages/Activity.jsx';
 import LoanPage from './pages/LoanPage.jsx';
 import Shelf from './pages/Shelf.jsx';
+import Circles from './pages/Circles.jsx';
+import CirclePage from './pages/CirclePage.jsx';
 import NotFound from './pages/NotFound.jsx';
 import { Spinner } from './components/ui.jsx';
 
@@ -20,6 +22,7 @@ export default function App() {
   const [config, setConfig] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [attention, setAttention] = useState(0);
+  const [invitations, setInvitations] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef = useRef(null);
@@ -32,8 +35,9 @@ export default function App() {
 
   const refreshAttention = useCallback(async () => {
     try {
-      const list = await api.reservations();
+      const [list, circles] = await Promise.all([api.reservations(), api.circles()]);
       setAttention(list.filter((r) => r.needsMe).length);
+      setInvitations(circles.invitations.length);
     } catch { /* badge is a nicety */ }
   }, []);
 
@@ -66,7 +70,7 @@ export default function App() {
     navigate('/');
   }, [navigate]);
 
-  const value = useMemo(() => ({ me, config, toast, switchTo, signOut, refreshAttention, attention }), [me, config, toast, switchTo, signOut, refreshAttention, attention]);
+  const value = useMemo(() => ({ me, config, toast, switchTo, signOut, refreshAttention, attention, invitations }), [me, config, toast, switchTo, signOut, refreshAttention, attention, invitations]);
 
   return (
     <AppContext.Provider value={value}>
@@ -86,6 +90,8 @@ export default function App() {
             <Route path="/activity" element={<Activity />} />
             <Route path="/loans/:id" element={<LoanPage />} />
             <Route path="/shelf" element={<Shelf />} />
+            <Route path="/circles" element={<Circles />} />
+            <Route path="/circles/:id" element={<CirclePage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         )}

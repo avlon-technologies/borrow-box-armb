@@ -11,6 +11,13 @@ export function availability(item, today) {
   return { tone: 'ok', label: 'Available now' };
 }
 
+/** "Riverside Neighbours" for an item shared through a circle the viewer is in. */
+export function CircleChip({ item }) {
+  if (!item.circles?.length) return item.audience === 'circles' ? <Chip tone="circle">🫶 Circles only</Chip> : null;
+  const label = item.circles.length === 1 ? item.circles[0].name : `${item.circles.length} circles`;
+  return <Chip tone="circle"><span aria-hidden="true">🫶 </span>{item.audience === 'circles' ? '' : 'Also in '}{label}</Chip>;
+}
+
 export default function ItemCard({ item }) {
   const { config } = useApp();
   const a = availability(item, config?.today);
@@ -31,7 +38,10 @@ export default function ItemCard({ item }) {
               <span className="muted">{item.owner.neighborhood}</span>
             </span>
           </div>
-          <Chip tone={a.tone}>{a.label}</Chip>
+          <div className="chip-row">
+            <Chip tone={a.tone}>{a.label}</Chip>
+            <CircleChip item={item} />
+          </div>
         </div>
       </Link>
     </li>

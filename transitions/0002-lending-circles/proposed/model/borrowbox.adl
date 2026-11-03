@@ -1,0 +1,520 @@
+// BorrowBox — a personal lending library for friends and small communities.
+// Semantic architecture only: no technology, no UI layout, no algorithm choice.
+document semantic at :: {
+
+system BorrowBox #69416aaa-49b7-45cd-b672-a28741a73b6d {
+  desc "A warm, trustworthy lending library: people list possessions, friends request dates, and both sides coordinate handoff, use and return."
+
+  actor Owner #3b1215d7-5019-4506-809a-fd18b69a857f [person] {
+    desc "A person who lists their own items and decides who may borrow them and when. Authority over an item comes only from owning it."
+    uses: ::BorrowBox
+  }
+
+  actor ProductTeam #9f55257b-d132-4b27-b23a-fed1215eeaab [team] {
+    desc "The Avlon team accountable for BorrowBox and its lending rules."
+    owns: ::BorrowBox, ::BorrowBox.Lending.Library
+  }
+
+  actor Member #20f8ef09-ac3d-4d39-936f-94723db443c4 [person] {
+    desc "Anyone using BorrowBox, before any item or reservation gives them the owner's or the borrower's part. Circles are formed, joined and looked after by members."
+    uses: ::BorrowBox
+  }
+
+  actor Borrower #01f174c5-e84b-4d9f-82c2-d0a660682cc8 [person] {
+    desc "A person who explores other people's items, requests dates and takes temporary custody. Any member may be a borrower of items they do not own."
+    uses: ::BorrowBox
+  }
+
+  requirement EveryActionAuthorizedOnServer #bcf33b54-c9de-4268-802d-ea195b66424a {
+    desc "Every state-changing action is authorized against the acting person's relationship to the item or reservation on the server; the interface hiding a button is never the control. (A05)"
+  }
+
+  requirement StateSurvivesRestart #c7bb5566-c947-4157-b77d-d8b6849c1335 {
+    desc "Items, reservations, loans, evidence and history persist durably across restarts, and the demo seed is repeatable. (A11)"
+  }
+
+  requirement RepeatedSubmissionIsHarmless #5f32f54d-2733-4467-ab04-2d01e71c0a99 {
+    desc "Submitting the same action twice (double click, retry, refresh) produces one effect, never a duplicate request, evidence entry or transition."
+  }
+
+  policy ServerSideAuthorization #72dc4b89-46be-4f3e-a463-fcfeb53aebe0 {
+    statement "Identity is established per request by the server and every command is admitted only for the senders its admission names, with ownership or borrowership evidence checked against durable state."
+  }
+
+  policy CalendarDatePolicy #27002ac9-aee4-49c1-b2cd-c450928055e9 {
+    statement "Borrowing periods are whole calendar days, inclusive of both the start and the due date, interpreted in the single community time zone the library is configured with. Today, lateness and availability are all judged in that zone."
+  }
+
+  domain Lending #db3fea2b-58de-496b-8543-362669e9e18b {
+    classification = core
+    desc "Temporary custody of privately owned items between people who know each other."
+
+    capability ItemListing #e3fdcf01-cb25-4009-82f0-22da2d241cbb {
+      desc "Offering one's own possessions for borrowing, with a picture, a description and clear borrowing rules, and withdrawing them from new borrowing."
+      requirement OnlyOwnersShapeListings #9f07f731-4780-4986-8649-cf80d1020128 {
+        desc "Only the owner of an item may edit it or change whether it accepts new requests. (A05)"
+      }
+      requirement HiddenItemsKeepCommitments #91a8e36f-f989-4375-a907-90bd037e4f04 {
+        desc "A hidden item accepts no new borrow requests and no longer appears to others, while reservations and loans already made for it continue unchanged. (A10)"
+      }
+    }
+
+    capability CatalogDiscovery #3e3e15d6-b683-495a-baf6-b60f1c289227 {
+      desc "Exploring what friends are willing to lend: searching, filtering, and understanding an item's owner, rules and availability."
+      requirement CatalogShowsAvailability #1ea05f05-2422-4e12-b16c-da31ea3b18d8 {
+        desc "Anyone exploring the catalog can see each item offered to them, with its photo, owner, lending rules and the dates already committed. (A01)"
+      }
+    }
+
+    capability ReservationCoordination #fd7692f9-d8ca-456e-971a-0ab338a012aa {
+      desc "Agreeing who may borrow an item for which dates."
+      requirement RequestsPersistAsPending #b5c128e4-92e0-4f1b-808f-0ba9260657fe {
+        desc "A borrower requests an inclusive date range with an optional note, and the request is durably pending until the owner decides or the borrower cancels. (A02)"
+      }
+      requirement DecisionsFollowLifecycle #19bc6404-8861-460c-b001-13cf467cc95e {
+        desc "Only a pending request may be approved or declined, only by the item's owner; only its borrower may cancel it; any other transition is refused. (A03)"
+      }
+      requirement NoSelfBorrowing #af3d20f1-2c1e-417f-9df5-1f43714ef3e8 {
+        desc "No one may request to borrow an item they own. (A05)"
+      }
+      requirement ApprovalsNeverOverlap #1d4ddd74-d5ed-4c19-b67e-9b06a4f52d25 {
+        desc "Overlapping pending requests may coexist, but no two committed reservations for one item ever overlap, even when approvals are submitted concurrently. (A04)"
+      }
+      requirement ExtensionsRecheckConflicts #4bb9ec48-bd08-4916-b426-0a88701f1ca2 {
+        desc "A borrower may propose a later due date; only the owner may accept it, and acceptance re-checks the extended days against every other commitment. (A08)"
+      }
+    }
+
+    capability LoanCustody #88c54dd6-068c-4dbb-8e2c-afb118222647 {
+      desc "Handing an item over, keeping track of who holds it, and getting it back."
+      requirement HandoffIsAttributed #52fd5178-5727-4c2e-9331-527e59a98c24 {
+        desc "The owner marks the item ready, the borrower confirms pickup and starts the return, and the owner confirms it is back; every step is recorded with who did it and when. (A06)"
+      }
+      requirement LateLoansRemainReturnable #eb33c7a6-fa8f-4be0-8b05-f7121fce6f51 {
+        desc "A loan past its due date is shown as overdue to both people and can still be returned normally. (A09)"
+      }
+    }
+
+    capability ConditionEvidence #67cade15-3cb8-4667-b31e-bb152698fe0f {
+      desc "Recording how an item looked before and after a loan, from each person's own point of view."
+      requirement EvidenceIsAttributedAndPreserved #c72d0c5c-acfe-401c-8a1f-896c2ec38543 {
+        desc "Condition notes and photos are attributed to their author and phase, are append-only, and a disagreement between owner and borrower is preserved in the history rather than overwritten. (A07)"
+      }
+    }
+
+    capability LendingCircles #fb597acf-8fce-4a6a-a98c-8f6c598933d9 {
+      desc "Small groups of friends forming circles, inviting each other, and choosing whether an item is offered to everybody or only to the circles its owner belongs to."
+      requirement CirclesGrowByInvitation #1319dc8f-c339-47f1-a002-d4f5771263d6 {
+        desc "Any member may start a circle and becomes its organiser; people join only by accepting an invitation from a current member; only the organiser removes members, and the organiser always stays a member."
+      }
+      requirement OwnersChooseAudience #741f5597-c5db-452b-8546-14b195421185 {
+        desc "Only an item's owner decides whether it is offered to everybody or only to chosen circles, and only circles the owner currently belongs to can be chosen."
+      }
+      requirement CircleOnlyItemsReachOnlyMembers #5dd6564a-3a95-4c41-9e02-f998b7c1dff1 {
+        desc "An item offered only to circles is shown to, and can be requested by, only people who at that moment share one of its circles with its owner."
+      }
+      requirement MembershipChangesKeepCommitments #4ebfe140-18a8-42bc-a1d2-5cea523aed65 {
+        desc "Leaving, removal, or narrowing an item's audience refuses new circle-only requests from then on, but every reservation already made, pending or committed, continues through decision, handoff, extension and return unchanged."
+      }
+    }
+
+    bounded-context Library #6e386931-3a6d-4df5-a086-20f6e8e555fe {
+      desc "The authority for items, their reservations, loans, condition evidence, the circles items are shared through, and the history of who did what. Circles live here because whether a request is admitted depends on membership at the same instant the request is recorded."
+      realizes: ::BorrowBox.Lending.ItemListing, ::BorrowBox.Lending.CatalogDiscovery, ::BorrowBox.Lending.ReservationCoordination, ::BorrowBox.Lending.LoanCustody, ::BorrowBox.Lending.ConditionEvidence, ::BorrowBox.Lending.LendingCircles
+
+      record ItemDraft v1 #09c77db5-1279-4f6a-885a-c403d501ac27 { title: text, category: text, description: text, lendingRules: text, maxLoanDays: int32 }
+      record ItemChange v1 #585618f4-935b-432e-9801-011298c9951a { itemId: text, title: text, category: text, description: text, lendingRules: text, maxLoanDays: int32 }
+      record VisibilityChange v1 #897dafa4-bf6e-4e3e-8f7d-33862e52cd95 { itemId: text, hidden: boolean }
+      record ItemRecord v1 #00db480d-0e1d-4ee2-9271-b3c1cf5b1d18 { itemId: text, ownerId: text, title: text, hidden: boolean }
+      record CatalogQuery v1 #683a1a5b-3d74-4795-875d-6653f4cf893e { text: optional(text), category: optional(text), availableFrom: optional(date), availableTo: optional(date) }
+      record CatalogPage v1 #781f89c7-77eb-4c77-8503-6fbc632a6fdd { items: list(ItemRecord) }
+
+      record BorrowRequest v1 #89317def-5b79-488e-9f08-d7cc7beeeec4 { itemId: text, startDate: date, endDate: date, note: optional(text) }
+      record ReservationAct v1 #7f8da44c-9926-410a-9b8e-04ef54f7813e { reservationId: text, note: optional(text) }
+      record ReservationRecord v1 #2d5ed52f-b9da-4498-a889-fabcc4b10510 { reservationId: text, itemId: text, borrowerId: text, startDate: date, endDate: date }
+      record ExtensionProposal v1 #7926b886-7798-4857-9c9b-7facbb56fc79 { reservationId: text, proposedEndDate: date, note: optional(text) }
+      record ExtensionAct v1 #0176ef50-d196-4b14-b29c-5a67cd19e6c0 { extensionId: text, reservationId: text }
+      record ExtensionRecord v1 #b23214f1-bdec-4384-b021-0ae7aaffe8dc { extensionId: text, reservationId: text, proposedEndDate: date }
+      record ConditionReport v1 #ba13c9c6-98fe-4938-b62e-c8d253bd1ace { reservationId: text, note: optional(text), photoCount: int32, disagrees: boolean }
+      record ConditionRecord v1 #e06e5ffd-8c70-421a-a61a-6efeb31860e4 { evidenceId: text, reservationId: text, authorId: text, phase: text, disagrees: boolean }
+
+      record CircleDraft v1 #e72f1edb-ddf7-4cdf-8eae-3350378bba08 { name: text, description: optional(text) }
+      record CircleInvitation v1 #d215be1b-c262-4054-962a-26deef38f54b { circleId: text, inviteeId: text }
+      record MembershipAct v1 #f5200b8a-f7c9-4ed1-9274-ee26741681f0 { circleId: text }
+      record MemberRemoval v1 #e04ff72f-ea11-42d5-aec9-35db30056c24 { circleId: text, memberId: text }
+      record AudienceChange v1 #2fd4ca16-8efa-42ca-aa2b-2f8ac8d558cb { itemId: text, audience: text, circleIds: list(text) }
+      record CircleRecord v1 #98416f7c-807e-43ac-a925-18c517c89bbd { circleId: text, name: text, organiserId: text }
+      record MembershipRecord v1 #298b7ea5-b56b-44e8-8687-7aa9324428e7 { circleId: text, memberId: text, standing: text, actorId: text }
+      record AudienceRecord v1 #8d86c672-2381-4992-a316-a41fb5b5f5df { itemId: text, audience: text, circleIds: list(text) }
+
+      record CircleMembership v1 #7bae83bc-4392-4059-8b6f-6570968e6b74 { circleId: text, memberId: text }
+      record CircleOrganisership v1 #7fe81b94-3c63-48c0-8aa1-473799247d1f { circleId: text, organiserId: text }
+      record OpenInvitation v1 #1ae8f340-01f4-4e8b-802a-793d0beb7eeb { circleId: text, inviteeId: text }
+      record ItemReach v1 #acecfcf6-c0fc-4331-bee5-68e973d4da20 { itemId: text, requesterId: text }
+
+      record ItemOwnership v1 #21ac82cb-ca45-4974-ac0c-c8f658928c3b { itemId: text, ownerId: text }
+      record Borrowership v1 #bfde3974-e77b-4f7a-9af2-c42fba6973ff { reservationId: text, borrowerId: text }
+      record NonOwnership v1 #6e2a4a98-0df9-467e-91ca-f65cd376a97e { itemId: text, requesterId: text }
+
+      command ListItem #8cef42b6-bf53-41c9-b856-3f97c9bba877 {
+        payload = ItemDraft
+        admits ::BorrowBox.Owner
+      }
+      command EditItem #167750da-bb94-4a52-8bf5-0f03cc4fde01 {
+        payload = ItemChange
+        admits ::BorrowBox.Owner requires ItemOwnership for itemId
+      }
+      command SetItemVisibility #33b53430-8f5f-4501-a6ec-f9744e5ddaa9 {
+        payload = VisibilityChange
+        admits ::BorrowBox.Owner requires ItemOwnership for itemId
+      }
+
+      command SetItemAudience #ca3e05e5-eb4a-45cc-b7bd-86421859a1a8 {
+        desc "The owner offers the item to everybody, or only to circles they choose among those they currently belong to."
+        payload = AudienceChange
+        admits ::BorrowBox.Owner requires ItemOwnership for itemId
+      }
+
+      command RequestToBorrow #2830e21f-ec6b-4801-b58d-e08c7fd4c5a6 {
+        payload = BorrowRequest
+        admits ::BorrowBox.Borrower requires NonOwnership for itemId, ItemReach for itemId
+      }
+      command ApproveRequest #309a71f5-8f81-4db8-a02f-08f29727cbef {
+        payload = ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+      command DeclineRequest #c79a7629-937c-4dcf-9446-dc019e9b0f73 {
+        payload = ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+      command CancelRequest #71335da1-fe01-49e1-b285-5b4cf9cf2a11 {
+        payload = ReservationAct
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      }
+
+      command MarkReady #9ef7525d-4a6c-4519-807b-cc7bb0f355e0 {
+        payload = ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+      command ConfirmPickup #29a378ec-523b-440d-92c0-363dc7c7b97b {
+        payload = ConditionReport
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      }
+      command StartReturn #29ea6f4c-5c1c-4f78-bb68-7d16b038294c {
+        payload = ConditionReport
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      }
+      command ConfirmReturn #7dca9b6f-04e4-4f14-87c2-f4e529cb3bc8 {
+        payload = ConditionReport
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+      command AddConditionNote #dac22f2b-a29a-4460-a36c-a39fba66e80c {
+        desc "Either party adds a further attributed note to a loan's condition history, for example a response to a disagreement."
+        payload = ConditionReport
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      }
+
+      command ProposeExtension #e8c7b5cb-66c3-413f-8684-eb63ab0cd0c0 {
+        payload = ExtensionProposal
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      }
+      command AcceptExtension #e2813e08-7b60-4e96-99a8-e799f0ef4085 {
+        payload = ExtensionAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+      command DeclineExtension #656bdef2-77c0-48d8-bcdc-8f7b17374090 {
+        payload = ExtensionAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      }
+
+      command CreateCircle #e679e237-e47d-43cf-811c-44dbca98ab3d {
+        payload = CircleDraft
+        admits ::BorrowBox.Member
+      }
+      command InviteToCircle #2cc22300-dadf-4f49-9485-949c9f26b962 {
+        payload = CircleInvitation
+        admits ::BorrowBox.Member requires CircleMembership for circleId
+      }
+      command AcceptInvitation #831e3980-240d-4bec-8d24-745731697bd1 {
+        payload = MembershipAct
+        admits ::BorrowBox.Member requires OpenInvitation for circleId
+      }
+      command DeclineInvitation #57d1b27b-987e-4616-a663-a5b76c7dc1fb {
+        payload = MembershipAct
+        admits ::BorrowBox.Member requires OpenInvitation for circleId
+      }
+      command LeaveCircle #22f9a369-120a-438d-a7a6-b4d0b9300865 {
+        payload = MembershipAct
+        admits ::BorrowBox.Member requires CircleMembership for circleId
+      }
+      command RemoveMember #bb696d05-3507-46d2-9579-53a6e2c33559 {
+        payload = MemberRemoval
+        admits ::BorrowBox.Member requires CircleOrganisership for circleId
+      }
+
+      event RequestSubmitted #e6688e98-07f7-4616-a6b4-5968307e6e44 { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event RequestApproved #90769a20-e020-4e7a-83bb-5b482abaab2c {
+        desc "The reservation is committed: its dates are now unavailable to anyone else."
+        payload = ReservationRecord
+        delivery[ordered; at-least-once; durable]
+      }
+      event RequestDeclined #bac7627c-21f3-4890-a81f-9513d939c8dc { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event RequestCancelled #f442ac17-d48c-4aed-a458-e783a07f9bfb { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event ItemReadied #839532cd-13a6-4fab-a6d7-a8da8a9daa00 { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event PickupConfirmed #59181a41-8306-4452-bf75-ffbd24ba83cf { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event ReturnStarted #1d774c32-273a-4341-ad95-80e2a385e4a2 { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event ReturnConfirmed #a16b1ae4-3ff3-4d22-9dad-c0f1ba1b2624 { payload = ReservationRecord delivery[ordered; at-least-once; durable] }
+      event ExtensionProposed #643c33ce-8866-4cb4-9012-3d62fd94bfba { payload = ExtensionRecord delivery[ordered; at-least-once; durable] }
+      event ExtensionAccepted #0027a1fe-e4e2-49b3-9526-86ba2bb6b6eb { payload = ExtensionRecord delivery[ordered; at-least-once; durable] }
+      event ExtensionDeclined #7173811c-83ac-407e-a617-74e59e63d4e3 { payload = ExtensionRecord delivery[ordered; at-least-once; durable] }
+      event ConditionRecorded #d94bb019-a6ba-4d2d-990f-2c62a7596ace { payload = ConditionRecord delivery[ordered; at-least-once; durable] }
+
+      event ItemAudienceChanged #ea179f54-23bf-4b95-bf0c-2e248be895ec { payload = AudienceRecord delivery[ordered; at-least-once; durable] }
+      event CircleCreated #e8f19758-5792-44f7-afd1-6c15887123df { payload = CircleRecord delivery[ordered; at-least-once; durable] }
+      event MemberInvited #d1675e8f-eba6-4b58-b15b-71ea1c448339 { payload = MembershipRecord delivery[ordered; at-least-once; durable] }
+      event InvitationAccepted #546b283f-788c-4573-a4c9-c5d537052dc5 { payload = MembershipRecord delivery[ordered; at-least-once; durable] }
+      event InvitationDeclined #e8dbf877-784e-411d-83dd-b20fd7e77e17 { payload = MembershipRecord delivery[ordered; at-least-once; durable] }
+      event MemberLeft #260e1be2-74bf-47dd-8349-9a7ba2ae220e { payload = MembershipRecord delivery[ordered; at-least-once; durable] }
+      event MemberRemoved #068514be-fc34-4960-9572-7fa833b99361 {
+        desc "The person is no longer a member. Nothing they already arranged changes."
+        payload = MembershipRecord
+        delivery[ordered; at-least-once; durable]
+      }
+
+      resource ItemStore #6f1d9389-7b0f-445f-b9a8-a1c414658f15 [data-store] {
+        desc "Every listed item with its owner, rules, photo, visibility, audience (everybody or circles only) and the circles it is shared with. Hiding or narrowing the audience is a setting, never a deletion."
+        persistence[durable; strong]
+      }
+      resource ReservationStore #3f2d5bf6-42d8-4184-9891-59f405b64f9e [data-store] {
+        desc "Every request and loan with its inclusive date range and lifecycle position, and every extension proposal. The single authority that committed reservations of one item never overlap."
+        persistence[durable; strong]
+      }
+      resource EvidenceStore #649b08e6-f07b-4f06-a18c-7224d5ee83fb [data-store] {
+        desc "Append-only condition notes and their photos, each attributed to an author, a role and a phase."
+        persistence[durable; strong]
+      }
+      resource ActivityJournal #b002032f-35ae-4136-9cfc-4ef450751698 [data-store] {
+        desc "Append-only record of every accepted action: who, what, when, on which item and reservation."
+        persistence[durable; strong]
+      }
+      resource PhotoStore #4c1d284c-59cb-4e2d-afbb-91295ecea94d [object-store] {
+        desc "Item and condition photographs."
+        persistence[durable]
+      }
+
+      resource CircleStore #b20d3d27-629b-4ddb-96fd-019a01271372 [data-store] {
+        desc "Every circle with its organiser, and every membership with its standing (invited, active, declined, left, removed). Ending a membership changes its standing; nothing is deleted. It also keeps each circle's own append-only activity, kept apart from the loan journal so that one service writes each store."
+        persistence[durable; strong]
+      }
+
+      read-model CircleActivity #2e1a157b-08c0-428e-afc7-58ea4c4f2811 {
+        desc "The human timeline of one circle: who started it, who was invited, joined, left or was removed, and which items were shared with it."
+        projectsFrom: CircleCreated, MemberInvited, InvitationAccepted, InvitationDeclined, MemberLeft, MemberRemoved, ItemAudienceChanged
+      }
+
+      read-model LoanHistory #27295c81-7ef7-4ef6-8cb2-070d4db8d20e {
+        desc "The human timeline of one reservation: both people's actions and both viewpoints on condition, in order."
+        projectsFrom: RequestSubmitted, RequestApproved, RequestDeclined, RequestCancelled, ItemReadied, PickupConfirmed, ReturnStarted, ReturnConfirmed, ExtensionProposed, ExtensionAccepted, ExtensionDeclined, ConditionRecorded
+      }
+
+      business-rule NoSelfBorrowing #f518a05a-e0f3-437f-8806-9099f2f1b3f5 {
+        statement "A request to borrow is refused when the requester owns the item."
+      }
+      business-rule HiddenItemsTakeNoNewRequests #590cee7f-4818-4b95-8e6f-38b34f467f0a {
+        statement "A request to borrow a hidden item is refused; hiding changes nothing about requests and loans already made."
+      }
+      business-rule RequestsFitTheCalendar #7df28a87-8fb8-44e1-9e3c-78c9a49019d8 {
+        statement "A requested range starts no earlier than today in the community time zone, ends on or after its start, and is no longer than the item's maximum loan length."
+      }
+      business-rule CommittedReservationsNeverOverlap #903d94de-b0f1-4caf-b6e7-563afff0e93e {
+        statement "A request may be approved only if its inclusive range overlaps no other approved, ready, borrowed or returning reservation of the same item; the check and the commit are one atomic act."
+      }
+      business-rule OnlyPendingIsDecided #8e75bd72-1291-4ff0-9fab-5f8006938a2c {
+        statement "Approve and decline apply only to a pending request; cancel applies to the borrower's own request before pickup."
+      }
+      business-rule LoanStepsInOrder #bc603119-43eb-4d7b-a425-a01e4de39623 {
+        statement "Ready follows approval, pickup follows ready, return starts only while borrowed, and confirmation follows the start of return."
+      }
+      business-rule ExtensionRecheck #65e1e12a-fbdb-4054-86bc-a203cb9444cd {
+        statement "An extension may be accepted only while the loan is open and only if the days between the current and proposed due date overlap no other commitment for the item."
+      }
+      business-rule OverdueIsInformational #bb9f26d0-71fc-45bc-8fbf-a223592f716c {
+        statement "A loan whose due date is before today in the community time zone is overdue; being overdue blocks nothing about returning it."
+      }
+      business-rule EvidenceIsAppendOnly #5ed1dffb-6b26-4300-a87b-335f9db04ecc {
+        statement "Condition evidence is only ever added; an owner who disagrees with the borrower's account records their own evidence marked as a disagreement, and both remain."
+      }
+
+      business-rule CircleOnlyNeedsSharedCircle #4a96e944-abdc-4433-a589-54557d5a9e55 {
+        statement "A request for an item offered only to circles is refused unless, at the moment it is recorded, the requester and the owner are both active members of a circle the item is shared with. Items offered to everybody need no circle."
+      }
+      business-rule MembershipChangesKeepCommitments #4a52633f-709c-4c2e-ac91-35d056c58140 {
+        statement "Leaving, removal and narrowing an item's audience only refuse new circle-only requests; no reservation already made is cancelled, declined or blocked from its next step, and its people keep seeing the item."
+      }
+      business-rule ShareOnlyWhereMember #052fedf4-9902-4f09-b071-d24d094406ea {
+        statement "An owner can share an item only with circles they are an active member of; an item offered only to circles is reachable through a circle only while its owner is still an active member there."
+      }
+      business-rule OnlyMembersInvite #9f744b16-47e1-4f58-893e-240a111eeaa8 {
+        statement "Only an active member may invite, and only someone not already invited or active in that circle; only the invited person accepts or declines."
+      }
+      business-rule OrganiserStaysMember #524792b2-ce65-494f-bf09-3331eedc69ad {
+        statement "The organiser removes members and can be neither removed nor leave."
+      }
+
+      service CatalogService #bfe9b77a-a1ef-4afa-8bc7-49f9ed1b8c52 {
+        desc "Accepts owners' listing changes and answers catalog searches with availability."
+        realizes: ::BorrowBox.Lending.ItemListing, ::BorrowBox.Lending.CatalogDiscovery
+        satisfies: ::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings, ::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments, ::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability, ::BorrowBox.EveryActionAuthorizedOnServer, ::BorrowBox.Lending.LendingCircles.OwnersChooseAudience, ::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers
+        governedBy: ::BorrowBox.ServerSideAuthorization
+        applies: HiddenItemsTakeNoNewRequests, ShareOnlyWhereMember, CircleOnlyNeedsSharedCircle
+        handles: ListItem, EditItem, SetItemVisibility, SetItemAudience
+        publishes: ItemAudienceChanged
+        writes: ItemStore, PhotoStore
+        reads: ItemStore, ReservationStore, PhotoStore, CircleStore
+        deployedAs: ::BorrowBox.WebApp
+        on ListItem -> none
+        on EditItem -> none
+        on SetItemVisibility -> none
+        on SetItemAudience -> all-of ItemAudienceChanged
+          correlate ItemAudienceChanged payload.itemId = payload.itemId
+        api CatalogApi #07c97205-1ec7-4e3b-9a8b-e32ef86c3e40 {
+          operation SearchCatalog #241e6f8a-a759-4afb-be7c-316d931d76a5 { in = CatalogQuery out = CatalogPage }
+        }
+      }
+
+      service BorrowingService #44a92019-ffa6-4a31-8725-29d9b823dcea {
+        desc "Decides requests, carries each loan through handoff and return, records condition evidence and extensions, and keeps the history."
+        realizes: ::BorrowBox.Lending.ReservationCoordination, ::BorrowBox.Lending.LoanCustody, ::BorrowBox.Lending.ConditionEvidence
+        satisfies: ::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending, ::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle, ::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing, ::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap, ::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts, ::BorrowBox.Lending.LoanCustody.HandoffIsAttributed, ::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable, ::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved, ::BorrowBox.EveryActionAuthorizedOnServer, ::BorrowBox.StateSurvivesRestart, ::BorrowBox.RepeatedSubmissionIsHarmless, ::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers, ::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments
+        governedBy: ::BorrowBox.ServerSideAuthorization, ::BorrowBox.CalendarDatePolicy
+        applies: NoSelfBorrowing, HiddenItemsTakeNoNewRequests, RequestsFitTheCalendar, CommittedReservationsNeverOverlap, OnlyPendingIsDecided, LoanStepsInOrder, ExtensionRecheck, OverdueIsInformational, EvidenceIsAppendOnly, CircleOnlyNeedsSharedCircle, MembershipChangesKeepCommitments
+        handles: RequestToBorrow, ApproveRequest, DeclineRequest, CancelRequest, MarkReady, ConfirmPickup, StartReturn, ConfirmReturn, AddConditionNote, ProposeExtension, AcceptExtension, DeclineExtension
+        publishes: RequestSubmitted, RequestApproved, RequestDeclined, RequestCancelled, ItemReadied, PickupConfirmed, ReturnStarted, ReturnConfirmed, ExtensionProposed, ExtensionAccepted, ExtensionDeclined, ConditionRecorded
+        subscribesTo: RequestSubmitted, RequestApproved, RequestDeclined, RequestCancelled, ItemReadied, PickupConfirmed, ReturnStarted, ReturnConfirmed, ExtensionProposed, ExtensionAccepted, ExtensionDeclined, ConditionRecorded
+        projects: LoanHistory
+        writes: ReservationStore, EvidenceStore, PhotoStore, ActivityJournal
+        reads: ItemStore, ReservationStore, EvidenceStore, ActivityJournal, LoanHistory, CircleStore
+        deployedAs: ::BorrowBox.WebApp
+        on RequestToBorrow -> all-of RequestSubmitted
+          correlate RequestSubmitted payload.itemId = payload.itemId
+        on ApproveRequest -> all-of RequestApproved
+          correlate RequestApproved payload.reservationId = payload.reservationId
+        on DeclineRequest -> all-of RequestDeclined
+          correlate RequestDeclined payload.reservationId = payload.reservationId
+        on CancelRequest -> all-of RequestCancelled
+          correlate RequestCancelled payload.reservationId = payload.reservationId
+        on MarkReady -> all-of ItemReadied
+          correlate ItemReadied payload.reservationId = payload.reservationId
+        on ConfirmPickup -> all-of PickupConfirmed, ConditionRecorded
+          correlate PickupConfirmed payload.reservationId = payload.reservationId
+          correlate ConditionRecorded payload.reservationId = payload.reservationId
+        on StartReturn -> all-of ReturnStarted, ConditionRecorded
+          correlate ReturnStarted payload.reservationId = payload.reservationId
+          correlate ConditionRecorded payload.reservationId = payload.reservationId
+        on ConfirmReturn -> all-of ReturnConfirmed, ConditionRecorded
+          correlate ReturnConfirmed payload.reservationId = payload.reservationId
+          correlate ConditionRecorded payload.reservationId = payload.reservationId
+        on AddConditionNote -> all-of ConditionRecorded
+          correlate ConditionRecorded payload.reservationId = payload.reservationId
+        on ProposeExtension -> all-of ExtensionProposed
+          correlate ExtensionProposed payload.reservationId = payload.reservationId
+        on AcceptExtension -> all-of ExtensionAccepted
+          correlate ExtensionAccepted payload.extensionId = payload.extensionId
+        on DeclineExtension -> all-of ExtensionDeclined
+          correlate ExtensionDeclined payload.extensionId = payload.extensionId
+        on RequestSubmitted -> none
+        on RequestApproved -> none
+        on RequestDeclined -> none
+        on RequestCancelled -> none
+        on ItemReadied -> none
+        on PickupConfirmed -> none
+        on ReturnStarted -> none
+        on ReturnConfirmed -> none
+        on ExtensionProposed -> none
+        on ExtensionAccepted -> none
+        on ExtensionDeclined -> none
+        on ConditionRecorded -> none
+      }
+
+      service CircleService #3fd714f4-f407-4584-9405-8999dd5430f5 {
+        desc "Forms circles, carries invitations and memberships through their lifecycle, and keeps each circle's history. It never touches a reservation."
+        realizes: ::BorrowBox.Lending.LendingCircles
+        satisfies: ::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation, ::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments, ::BorrowBox.EveryActionAuthorizedOnServer, ::BorrowBox.RepeatedSubmissionIsHarmless, ::BorrowBox.StateSurvivesRestart
+        governedBy: ::BorrowBox.ServerSideAuthorization
+        applies: OnlyMembersInvite, OrganiserStaysMember, MembershipChangesKeepCommitments
+        handles: CreateCircle, InviteToCircle, AcceptInvitation, DeclineInvitation, LeaveCircle, RemoveMember
+        publishes: CircleCreated, MemberInvited, InvitationAccepted, InvitationDeclined, MemberLeft, MemberRemoved
+        subscribesTo: CircleCreated, MemberInvited, InvitationAccepted, InvitationDeclined, MemberLeft, MemberRemoved, ItemAudienceChanged
+        projects: CircleActivity
+        writes: CircleStore
+        reads: CircleStore, ItemStore, CircleActivity
+        deployedAs: ::BorrowBox.WebApp
+        on CreateCircle -> all-of CircleCreated
+          correlate CircleCreated payload.name = payload.name
+        on InviteToCircle -> all-of MemberInvited
+          correlate MemberInvited payload.circleId = payload.circleId
+        on AcceptInvitation -> all-of InvitationAccepted
+          correlate InvitationAccepted payload.circleId = payload.circleId
+        on DeclineInvitation -> all-of InvitationDeclined
+          correlate InvitationDeclined payload.circleId = payload.circleId
+        on LeaveCircle -> all-of MemberLeft
+          correlate MemberLeft payload.circleId = payload.circleId
+        on RemoveMember -> all-of MemberRemoved
+          correlate MemberRemoved payload.circleId = payload.circleId
+        on CircleCreated -> none
+        on MemberInvited -> none
+        on InvitationAccepted -> none
+        on InvitationDeclined -> none
+        on MemberLeft -> none
+        on MemberRemoved -> none
+        on ItemAudienceChanged -> none
+      }
+    }
+  }
+
+  deployable WebApp #f1ffd8e1-cd48-4333-bf53-4d2d46995e8b {
+    desc "One locally started process serving the interface and the API over one durable store."
+  }
+  environment LocalDevelopment #ad702350-32e2-4339-b1ac-eeb110b602ee {
+    desc "An evaluator's or developer's machine."
+  }
+
+  test CatalogAndListingTests #b010657a-3353-451e-b3a1-6d3d90366bea {
+    desc "Catalog search, item detail with availability, owner-only edit and hide, hidden items refuse new requests but keep reservations."
+    verifies: Lending.ItemListing.OnlyOwnersShapeListings, Lending.ItemListing.HiddenItemsKeepCommitments, Lending.CatalogDiscovery.CatalogShowsAvailability, Lending.Library.CatalogService
+  }
+  test RequestLifecycleTests #4ecb98b0-e2a4-4c70-9544-c1f6b1331682 {
+    desc "Request, approve, decline, cancel, refused transitions and self-borrowing."
+    verifies: Lending.ReservationCoordination.RequestsPersistAsPending, Lending.ReservationCoordination.DecisionsFollowLifecycle, Lending.ReservationCoordination.NoSelfBorrowing, Lending.Library.BorrowingService
+  }
+  test ApprovalConcurrencyTests #21efbcc8-6e68-4a01-9fab-9014d819f316 {
+    desc "Overlapping pending requests coexist; concurrent approvals of overlapping requests, in one process and across processes, commit exactly one."
+    verifies: Lending.ReservationCoordination.ApprovalsNeverOverlap, Lending.Library.BorrowingService
+  }
+  test AuthorizationTests #99a5794b-18c7-4772-9665-d032718e9793 {
+    desc "Every command refused for the wrong person, and for no identity."
+    verifies: EveryActionAuthorizedOnServer, Lending.Library.BorrowingService, Lending.Library.CatalogService
+  }
+  test HandoffAndEvidenceTests #7275a7e3-de8a-4330-abd9-e1b4f7a2db08 {
+    desc "Ready, pickup, return, confirmation with attributed history; separate owner and borrower evidence and a preserved disagreement; overdue loans returnable."
+    verifies: Lending.LoanCustody.HandoffIsAttributed, Lending.LoanCustody.LateLoansRemainReturnable, Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved, Lending.Library.BorrowingService
+  }
+  test ExtensionTests #a1bd2ab5-0172-4ffe-bbcb-fba49df192d0 {
+    desc "Extension proposal, owner-only acceptance, and the collision recheck at acceptance."
+    verifies: Lending.ReservationCoordination.ExtensionsRecheckConflicts, Lending.Library.BorrowingService
+  }
+  test CircleMembershipTests #c3994012-a607-4770-b511-712e153bb204 {
+    desc "Creating a circle, inviting, accepting and declining, leaving and removal; only members invite, only the organiser removes, the organiser stays."
+    verifies: Lending.LendingCircles.CirclesGrowByInvitation, Lending.Library.CircleService
+  }
+  test CircleAccessTests #f4518af0-98e6-4103-97ac-9cb4493e36ed {
+    desc "Circle-only items are seen and requested only through a shared circle; removal, leaving and narrowing the audience refuse new requests while pending and committed reservations continue to return; removal racing a request."
+    verifies: Lending.LendingCircles.OwnersChooseAudience, Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers, Lending.LendingCircles.MembershipChangesKeepCommitments, Lending.Library.CatalogService, Lending.Library.BorrowingService
+  }
+  test PersistenceAndIdempotencyTests #f0736d94-a04b-4a20-8133-40db8bec5e6f {
+    desc "State survives a server restart over the same store; a repeated submission with the same key has one effect."
+    verifies: StateSurvivesRestart, RepeatedSubmissionIsHarmless, Lending.Library.BorrowingService
+  }
+}
+}

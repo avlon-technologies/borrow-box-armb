@@ -2,7 +2,7 @@ model {
   bdl         1.0
   types       adl-type/1.0
   expressions adl-expr/1.0
-  definition  "2026-11-02.2"
+  definition  "2026-11-03.1"
 }
 
 business BorrowBoxBusiness #b-1001 {
@@ -33,6 +33,10 @@ business BorrowBoxBusiness #b-1001 {
       purpose { "restore custody and record return condition" }
     }
 
+    capability LendWithinCircles #c-1005 {
+      purpose { "let groups of friends form circles, invite each other, and offer items to everybody or only to the circles they belong to" }
+    }
+
     obligation ReturnBorrowedItem [internal-commitment] #o-1001 {
       borneBy Borrower
       activatedBy PickupConfirmed
@@ -60,6 +64,7 @@ business BorrowBoxBusiness #b-1001 {
       lendingRules: text
       maxLoanDays: int32
       listing: ListingStatus
+      audience: Audience
 
       state-model ListingLifecycle for listing #sm-1001 {
         initial Listed
@@ -195,7 +200,87 @@ business BorrowBoxBusiness #b-1001 {
       disagrees: boolean
     }
 
+    entity Circle #en-1006 {
+      description "A small group of friends who lend to each other. The person who creates it is its organiser."
+      identity circleId
+      circleId: text
+      name: text
+      organiser: Person
+    }
+
+    entity Membership #en-1007 {
+      description "One person's standing in one circle. Its history is kept: leaving or being removed ends the standing, it never erases it."
+      identity membershipId
+      membershipId: text
+      circle: Circle
+      member: Person
+      standing: MembershipStatus
+
+      state-model MembershipLifecycle for standing #sm-1004 {
+        initial Invited
+
+        transition Join #t-1031 {
+          from Invited
+          to Active
+          triggeredBy AcceptInvitation
+          produces InvitationAccepted
+        }
+
+        transition Refuse #t-1032 {
+          from Invited
+          to Declined
+          triggeredBy DeclineInvitation
+          produces InvitationDeclined
+        }
+
+        transition Leave #t-1033 {
+          from Active
+          to Left
+          triggeredBy LeaveCircle
+          produces MemberLeft
+        }
+
+        transition Remove #t-1034 {
+          from Active
+          to Removed
+          triggeredBy RemoveMember
+          produces MemberRemoved
+        }
+
+        transition ReinviteDeclined #t-1035 {
+          from Declined
+          to Invited
+          triggeredBy InviteToCircle
+          produces MemberInvited
+        }
+
+        transition ReinviteLeft #t-1036 {
+          from Left
+          to Invited
+          triggeredBy InviteToCircle
+          produces MemberInvited
+        }
+
+        transition ReinviteRemoved #t-1037 {
+          from Removed
+          to Invited
+          triggeredBy InviteToCircle
+          produces MemberInvited
+        }
+      }
+    }
+
+    entity CircleShare #en-1008 {
+      description "An owner's contribution of one of their items to one circle they belong to."
+      identity shareId
+      shareId: text
+      item: Item
+      circle: Circle
+    }
+
     enum ListingStatus #e-1001 { Listed Hidden }
+    enum Audience #e-1005 { Everyone CirclesOnly }
+    enum MembershipStatus #e-1006 { Invited Active Declined Left Removed }
     enum ReservationStatus #e-1002 { Pending Approved Declined Cancelled Ready Borrowed Returning Returned }
     enum ExtensionStatus #e-1003 { Proposed Accepted Declined }
     enum ConditionPhase #e-1004 { Handoff Return Followup }
@@ -356,6 +441,77 @@ business BorrowBoxBusiness #b-1001 {
       targets Item
     }
 
+    action CreateCircle [permitted] #ac-1019 {
+      description "Any member starts a circle and becomes its organiser and first active member."
+      mayPerform Member
+      exercises LendWithinCircles
+      creates Circle
+      produces CircleCreated
+    }
+
+    action InviteToCircle [permitted] #ac-1020 {
+      description "A current member of a circle invites someone who is not currently a member."
+      mayPerform Member
+      exercises LendWithinCircles
+      targets Circle
+      creates Membership
+      produces MemberInvited
+      outcome { Membership.standing == MembershipStatus "Invited" }
+    }
+
+    action AcceptInvitation [permitted] #ac-1021 {
+      mayPerform Member
+      exercises LendWithinCircles
+      targets Membership
+      changes Membership
+      produces InvitationAccepted
+      precondition { Membership.standing == MembershipStatus "Invited" }
+    }
+
+    action DeclineInvitation [permitted] #ac-1022 {
+      mayPerform Member
+      exercises LendWithinCircles
+      targets Membership
+      changes Membership
+      produces InvitationDeclined
+      precondition { Membership.standing == MembershipStatus "Invited" }
+    }
+
+    action LeaveCircle [permitted] #ac-1023 {
+      description "A member other than the organiser steps out of a circle."
+      mayPerform Member
+      exercises LendWithinCircles
+      targets Membership
+      changes Membership
+      produces MemberLeft
+      precondition { Membership.standing == MembershipStatus "Active" }
+    }
+
+    action RemoveMember [permitted] #ac-1024 {
+      description "The organiser removes a member. New circle-only requests from that person stop; what they already arranged continues."
+      mayPerform Organiser
+      exercises LendWithinCircles
+      targets Membership
+      changes Membership
+      produces MemberRemoved
+      precondition { Membership.standing == MembershipStatus "Active" }
+    }
+
+    action ChooseAudience [permitted] #ac-1025 {
+      description "The owner offers an item to everybody, or only to the circles they choose among those they belong to."
+      mayPerform Owner
+      exercises LendWithinCircles
+      targets Item
+      changes Item
+      creates CircleShare
+      produces ItemAudienceChanged
+    }
+
+    action CancelOnMembershipChange [forbidden] #ac-1026 {
+      description "Named so a reader finds it: leaving, removal, or narrowing an item's audience never cancels, declines or stalls a reservation already made."
+      targets Reservation
+    }
+
     fact ItemListed #f-1001 { item: text }
     fact ItemHidden #f-1002 { item: text }
     fact ItemShown #f-1003 { item: text }
@@ -371,6 +527,13 @@ business BorrowBoxBusiness #b-1001 {
     fact ExtensionAccepted #f-1013 { reservation: text, newEndDate: date }
     fact ExtensionDeclined #f-1014 { reservation: text }
     fact ConditionRecorded #f-1015 { reservation: text, author: text, disagrees: boolean }
+    fact CircleCreated #f-1016 { circle: text, organiser: text }
+    fact MemberInvited #f-1017 { circle: text, member: text, invitedBy: text }
+    fact InvitationAccepted #f-1018 { circle: text, member: text }
+    fact InvitationDeclined #f-1019 { circle: text, member: text }
+    fact MemberLeft #f-1020 { circle: text, member: text }
+    fact MemberRemoved #f-1021 { circle: text, member: text, removedBy: text }
+    fact ItemAudienceChanged #f-1022 { item: text, audience: Audience }
 
     rule HiddenItemsTakeNoRequests #r-1001 {
       scope RequestToBorrow
@@ -388,6 +551,42 @@ business BorrowBoxBusiness #b-1001 {
       scope Reservation.ReservationLifecycle.BeginReturn
       condition Reservation.status == ReservationStatus "Borrowed"
       assertion "being past the due date never prevents a return; it is shown as overdue"
+    }
+
+    rule CircleOnlyNeedsSharedCircle #r-1004 {
+      scope RequestToBorrow
+      condition Item.audience == Audience "CirclesOnly"
+      assertion "the request is refused unless, at the moment it is made, the requester and the owner are both active members of a circle the item is shared with"
+    }
+
+    rule MembershipChangesKeepCommitments #r-1005 {
+      scope RemoveMember
+      condition Membership.standing == MembershipStatus "Active"
+      assertion "removal refuses that person's new circle-only requests from now on; every reservation already made, pending or committed, continues through decision, handoff, extension and return unchanged"
+    }
+
+    rule LeavingKeepsCommitments #r-1006 {
+      scope LeaveCircle
+      condition Membership.standing == MembershipStatus "Active"
+      assertion "leaving refuses new circle-only requests through that circle, in either direction; reservations already made continue unchanged"
+    }
+
+    rule ShareOnlyWhereMember #r-1007 {
+      scope ChooseAudience
+      condition Item.audience == Audience "CirclesOnly"
+      assertion "an item can be shared only with circles its owner is an active member of; narrowing the audience never touches reservations already made"
+    }
+
+    rule OnlyMembersInvite #r-1008 {
+      scope InviteToCircle
+      condition Membership.standing == MembershipStatus "Invited"
+      assertion "only an active member of the circle may invite, and only someone who is not already invited or active there"
+    }
+
+    invariant OrganiserStaysActive [population-scoped] #i-1004 {
+      description "A circle always has its organiser as an active member: the organiser cannot leave or be removed."
+      governs Membership
+      assertion "For every circle, the membership of its organiser is Active."
     }
 
     invariant RangeIsOrdered [element-scoped] #i-1001 {
@@ -416,6 +615,17 @@ business BorrowBoxBusiness #b-1001 {
         "the people settle it themselves, using the preserved history"
         "a community mediator decides"
     }
+
+    unspecified OrganiserSuccession #u-1002 {
+      modality { epistemic underspecified }
+      questions LeaveCircle
+      question "How does an organiser hand a circle to someone else, or close it?"
+      reason "The lending-circles request covers creating, inviting, removing and sharing; it says nothing about organisers stepping down or circles ending."
+      accountable "BorrowBox lending circles request"
+      alternatives
+        "the organiser names a successor among active members"
+        "the circle closes and its shares end, with existing reservations untouched"
+    }
   }
 
   actor Member [person] #a-1003 {
@@ -424,6 +634,11 @@ business BorrowBoxBusiness #b-1001 {
 
   actor Owner [person] #a-1001 {
     description "A member acting as the owner of a particular item."
+    specializes Member
+  }
+
+  actor Organiser [person] #a-1004 {
+    description "The member who created a circle and looks after its membership."
     specializes Member
   }
 

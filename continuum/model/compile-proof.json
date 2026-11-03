@@ -11,8 +11,8 @@
     ]
   },
   "ok": true,
-  "attestation": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42",
-  "changeState": "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f",
+  "attestation": "sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df",
+  "changeState": "sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7",
   "ledger": {
     "passed": 78,
     "failed": 0,
@@ -32,11 +32,11 @@
     "documents": [
       {
         "path": "borrowbox.adl",
-        "digest": "sha256:834bf5e42ee212d09e99ec4682cd2e5bd6a2a58d82f8f2b979bd4086a0c28a96",
-        "bytes": 25649
+        "digest": "sha256:dfe3f06c383194db9197634d31d69de52481033cda1266cf4306248baa73fbd4",
+        "bytes": 37250
       }
     ],
-    "inputSet": "sha256:bd2931cee108e688aeca1edff726ba0dd0377df2e2ddef96360e5cb8091f0650",
+    "inputSet": "sha256:8dc973472771be03e65eacb9c4bdeb46e538a3dd9b23c33665cbd43339bf668c",
     "note": "digests over the AUTHORED input bytes, distinct from the attestation (the engine's digest over canonical content)."
   },
   "verifier": {
@@ -53,7 +53,7 @@
         "id": "ad702350-32e2-4339-b1ac-eeb110b602ee",
         "document": "model/local-development.adl-binding.json",
         "completeness": "passed",
-        "bindingDigest": "sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d",
+        "bindingDigest": "sha256:147f9993340597c27e704508efdcbf30d59914c4b968f5b18981c7d64f65efb7",
         "notEvaluated": []
       }
     ],

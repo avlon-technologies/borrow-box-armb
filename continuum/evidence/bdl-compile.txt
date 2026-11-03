@@ -1,9 +1,23 @@
+# 2026-11-03T09:48Z, working tree before the lending-circles commit (parent 8f5d780)
+$ continuum business compile continuum/business.bdl
 document   continuum/business.bdl (bdl)
 language   continuum-bdl/1
 valid      yes
 ledger     5 entries
-0 errors, 2 other diagnostics
+0 errors, 8 other diagnostics
   warning bdl/analytical/no-declared-performer — ac-1017
           action: ac-1017
   warning bdl/analytical/no-declared-performer — ac-1018
           action: ac-1018
+  warning bdl/analytical/effective-performer-set — ac-1019
+          granted: a-1003; effective: a-1003, a-1001, a-1004, a-1002
+  warning bdl/analytical/effective-performer-set — ac-1020
+          granted: a-1003; effective: a-1003, a-1001, a-1004, a-1002
+  warning bdl/analytical/effective-performer-set — ac-1021
+          granted: a-1003; effective: a-1003, a-1001, a-1004, a-1002
+  warning bdl/analytical/effective-performer-set — ac-1022
+          granted: a-1003; effective: a-1003, a-1001, a-1004, a-1002
+  warning bdl/analytical/effective-performer-set — ac-1023
+          granted: a-1003; effective: a-1003, a-1001, a-1004, a-1002
+  warning bdl/analytical/no-declared-performer — ac-1026
+          action: ac-1026

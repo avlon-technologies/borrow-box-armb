@@ -1,0 +1,34 @@
+# 2026-11-03T09:48Z, working tree before the lending-circles commit (parent 8f5d780)
+$ continuum icp check transitions/0002-lending-circles continuum/history/0001-initial
+REFUSED
+transitionId sha256:a2f701aaabbcc0f9dc6528f3b6b46039b688de4093a2796389654966b5ec3489
+verified   NOT CLAIMED, which is not the same as denied — `applies` above IS the verdict this check makes
+           (composedJudged false) a `verified` verdict additionally claims apply(A,Δ)=B, that the emitted source
+           recompiles to the result, that the changed bindings apply to it, and that the complete resulting
+           suite resolves. Those need a COMPOSED build, which this check did not run, and the lifecycle
+           forbids claiming `verified` without one (DEVELOPMENT-LIFECYCLE §6.3, §14.1). `continuum icp
+           materialize` performs that build and judges them. See docs/VERDICTS.md.
+findings   base true  identity true
+  apply refused at apply: change/result/invalid-state
+
+  ?       lifecycle/proposal/apply-refused
+
+$ continuum apply continuum/history/0001-initial/model/borrowbox.adl-manifest.json <one-line probe change>
+mode       apply
+status     failed
+3 errors, 0 warnings
+
+  error   change/result/invalid-state — p.adl-change
+          required: valid-result, and it is not supplied
+          looked in: result.state
+          found (2):
+            id=adl/structural/unknown-member subject=27002ac9-aee4-49c1-b2cd-c450928055e9
+            id=adl/structural/unknown-member subject=72dc4b89-46be-4f3e-a463-fcfeb53aebe0
+  error   adl/structural/unknown-member — 27002ac9-aee4-49c1-b2cd-c450928055e9
+          nothing is admitted for member here
+          found: attributes
+          context: kind=Policy authored=["statement"]
+  error   adl/structural/unknown-member — 72dc4b89-46be-4f3e-a463-fcfeb53aebe0
+          nothing is admitted for member here
+          found: attributes
+          context: kind=Policy authored=["statement"]

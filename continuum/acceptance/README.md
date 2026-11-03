@@ -22,51 +22,83 @@ export function createAdapter({ createFakeProvider, env }) {
 // ctx = { scenario, provider, state, assert, env, log }  — provider is the scenario's fake provider
 ```
 
-### Step vocabulary — 19 distinct keys (derived from the scenarios — bind every key)
+### Step vocabulary — 21 distinct keys (derived from the scenarios — bind every key)
 
 | step | phases | args | used by |
 |---|---|---|---|
+| `circle.accept` | given, when | `as`, `circle` | 2 scenarios |
+| `circle.remove` | when | `as`, `circle`, `member` | 1 scenario |
 | `extension.accept` | then | `as`, `ext` | 1 scenario |
 | `extension.acceptExpectRefusal` | then | `as`, `ext`, `status` | 1 scenario |
 | `extension.propose` | then, when | `as`, `ext`, `ref`, `to` | 1 scenario |
 | `item.hide` | when | `as`, `item` | 1 scenario |
-| `loan.approved` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 1 scenario |
+| `loan.approved` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 2 scenarios |
 | `loan.borrowed` | given | `as`, `from`, `item`, `owner`, `ref`, `to` | 1 scenario |
 | `loan.dueDate` | then | `date`, `ref` | 1 scenario |
 | `loan.evidenceFrom` | then | `authors`, `disputed`, `ref` | 1 scenario |
-| `loan.status` | then | `ref`, `status` | 3 scenarios |
-| `request.act` | when | `action`, `as`, `disagrees`, `note`, `ref` | 2 scenarios |
+| `loan.status` | then | `ref`, `status` | 4 scenarios |
+| `request.act` | then, when | `action`, `as`, `disagrees`, `note`, `ref` | 3 scenarios |
 | `request.actExpectRefusal` | then | `action`, `as`, `ref`, `status` | 1 scenario |
 | `request.approveConcurrently` | when | `as`, `refs` | 1 scenario |
 | `request.countFor` | then | `as`, `count`, `from`, `item` | 1 scenario |
 | `request.exactlyOneApproved` | then | `refs` | 1 scenario |
-| `request.submit` | given, when | `as`, `from`, `item`, `ref`, `to` | 4 scenarios |
-| `request.submitExpectRefusal` | then, when | `as`, `from`, `item`, `status`, `to` | 2 scenarios |
+| `request.submit` | given, then, when | `as`, `from`, `item`, `ref`, `to` | 6 scenarios |
+| `request.submitExpectRefusal` | then, when | `as`, `from`, `item`, `status`, `to` | 4 scenarios |
 | `request.submitTwiceSameKey` | when | `as`, `from`, `item`, `ref`, `to` | 1 scenario |
 | `system.restart` | when | — | 1 scenario |
-| `system.start` | given | — | 6 scenarios |
+| `system.start` | given | — | 8 scenarios |
 
+- `circle.accept` — "Jo accepts Sam's invitation to Riverside Neighbours" / "Jo joins Riverside Neighbours"
+- `circle.remove` — "Maya, the organiser, removes Jo"
 - `extension.accept` — "Maya accepts"
 - `extension.acceptExpectRefusal` — "Maya's acceptance is refused because of Jo"
 - `extension.propose` — "Sam asks for day 5 instead" / "Sam asks to keep it until day 7"
 - `item.hide` — "Maya hides the guitar"
-- `loan.approved` — "Sam has Maya's guitar approved"
+- `loan.approved` — "Sam approves Jo's request for days 20-21" / "Sam has Maya's guitar approved"
 - `loan.borrowed` — "Sam holds Maya's projector until day 3"
 - `loan.dueDate` — "the loan is now due on day 5"
 - `loan.evidenceFrom` — "both accounts remain and the disagreement is recorded"
-- `loan.status` — "Sam's reservation is untouched" / "it is still pending" / "the loan is complete"
-- `request.act` — "Maya approves" / "Maya approves Jo's request before answering Sam" / "Maya confirms and disagrees" / "Maya marks it ready" / "Sam confirms pickup" / "Sam starts the return"
+- `loan.status` — "Sam's reservation is untouched" / "her approved reservation is untouched" / "it is still pending" / "the loan is complete"
+- `request.act` — "Maya approves" / "Maya approves Jo's request before answering Sam" / "Maya confirms and disagrees" / "Maya marks it ready" / "Sam confirms pickup" / "Sam starts the return" / "and moves on: Sam marks it ready" / "her pending request is still Sam’s to approve"
 - `request.actExpectRefusal` — "Jo, who does not own it, cannot approve" / "Maya cannot cancel Sam's request"
 - `request.approveConcurrently` — "Maya approves both at the same moment"
 - `request.countFor` — "there is exactly one such request"
 - `request.exactlyOneApproved` — "exactly one is approved and the other is still pending"
-- `request.submit` — "Jo has asked for it from day 6" / "Jo requests Maya's tent for days 12-15" / "Sam requests Maya's drill from today" / "Sam requests Maya's tent" / "Sam requests Maya's tent for days 10-13"
-- `request.submitExpectRefusal` — "Jo cannot request it" / "Maya asks to borrow her own tent"
+- `request.submit` — "Jo also asks for days 10-11" / "Jo can now ask for the bike" / "Jo has asked for it from day 6" / "Jo requests Maya's tent for days 12-15" / "Sam requests Maya's drill from today" / "Sam requests Maya's tent" / "Sam requests Maya's tent for days 10-13"
+- `request.submitExpectRefusal` — "Jo cannot make a new request" / "Jo cannot request it" / "Jo, not yet in Riverside Neighbours, asks for Sam's circle-only bike" / "Maya asks to borrow her own tent"
 - `request.submitTwiceSameKey` — "Sam's request is sent twice with the same key"
 - `system.restart` — "the library restarts"
 - `system.start` — "the library is running with the demo seed"
 
 ## Scenarios
+
+### `circle-only-request-needs-membership`
+
+A circle-only item can be requested only by someone who shares one of its circles with the owner; joining the circle opens it.
+
+- verifies: `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers` (Requirement), `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation` (Requirement), `::BorrowBox.Lending.Library.BorrowingService` (Service), `::BorrowBox.Lending.Library.CircleService` (Service)
+- realizes the declared Test `::BorrowBox.CircleAccessTests`
+- environment: `::BorrowBox.LocalDevelopment`
+
+**given**
+- the library is running with the demo seed `[system.start]`
+
+**when**
+- Jo, not yet in Riverside Neighbours, asks for Sam's circle-only bike `[request.submitExpectRefusal]`
+- Jo accepts Sam's invitation to Riverside Neighbours `[circle.accept]`
+
+**then**
+- Jo can now ask for the bike `[request.submit]`
+
+**Derived trace from `::BorrowBox.Lending.Library.RequestToBorrow`** (the compiler's process graph; weakest hop: correlated; declared causal closure: closed — never a runtime claim)
+
+```
+::BorrowBox.Lending.Library.RequestToBorrow
+  → ::BorrowBox.Lending.Library.BorrowingService [handles; correlated, authored-reaction, all-of]
+    ::BorrowBox.Lending.Library.RequestSubmitted
+      → ::BorrowBox.Lending.Library.BorrowingService [declared sink: -> none]
+      → ::BorrowBox.Lending.Library.BorrowingService projects ::BorrowBox.Lending.Library.LoanHistory [declared production]
+```
 
 ### `extension-recheck`
 
@@ -193,6 +225,39 @@ Two overlapping pending requests may coexist, but approving both is refused; con
       → ::BorrowBox.Lending.Library.BorrowingService projects ::BorrowBox.Lending.Library.LoanHistory [declared production]
 ```
 
+### `removal-keeps-commitments`
+
+Removing a member refuses their new circle-only requests while their approved reservation and their pending request both carry on.
+
+- verifies: `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments` (Requirement), `::BorrowBox.Lending.Library.CircleService` (Service), `::BorrowBox.Lending.Library.BorrowingService` (Service)
+- realizes the declared Test `::BorrowBox.CircleAccessTests`
+- environment: `::BorrowBox.LocalDevelopment`
+
+**given**
+- the library is running with the demo seed `[system.start]`
+- Jo joins Riverside Neighbours `[circle.accept]`
+- Sam approves Jo's request for days 20-21 `[loan.approved]`
+- Jo also asks for days 10-11 `[request.submit]`
+
+**when**
+- Maya, the organiser, removes Jo `[circle.remove]`
+
+**then**
+- Jo cannot make a new request `[request.submitExpectRefusal]`
+- her approved reservation is untouched `[loan.status]`
+- and moves on: Sam marks it ready `[request.act]`
+- her pending request is still Sam’s to approve `[request.act]`
+
+**Derived trace from `::BorrowBox.Lending.Library.RemoveMember`** (the compiler's process graph; weakest hop: correlated; declared causal closure: closed — never a runtime claim)
+
+```
+::BorrowBox.Lending.Library.RemoveMember
+  → ::BorrowBox.Lending.Library.CircleService [handles; correlated, authored-reaction, all-of]
+    ::BorrowBox.Lending.Library.MemberRemoved
+      → ::BorrowBox.Lending.Library.CircleService [declared sink: -> none]
+      → ::BorrowBox.Lending.Library.CircleService projects ::BorrowBox.Lending.Library.CircleActivity [declared production]
+```
+
 ### `self-borrow-refused`
 
 An owner cannot request their own item, and a non-owner cannot decide or cancel a request.
@@ -260,6 +325,10 @@ A pending request survives a restart, and a repeated submission with one key cre
 | `::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved` | `full-loan-journey` |
 | `::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments` | `hidden-item-keeps-reservations` |
 | `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings` | **none** |
+| `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers` | `circle-only-request-needs-membership` |
+| `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation` | `circle-only-request-needs-membership` |
+| `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments` | `removal-keeps-commitments` |
+| `::BorrowBox.Lending.LendingCircles.OwnersChooseAudience` | **none** |
 | `::BorrowBox.Lending.LoanCustody.HandoffIsAttributed` | `full-loan-journey` |
 | `::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable` | **none** |
 | `::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap` | `overlapping-approval-refused` |

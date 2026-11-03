@@ -65,10 +65,11 @@ function IdentityMenu() {
 }
 
 export default function Header() {
-  const { attention } = useApp();
+  const { attention, invitations } = useApp();
   const links = [
     { to: '/', label: 'Explore', icon: '🔍', end: true },
     { to: '/activity', label: 'Loans', icon: '🤝', badge: attention },
+    { to: '/circles', label: 'Circles', icon: '🫶', badge: invitations, badgeLabel: 'invitations' },
     { to: '/shelf', label: 'My shelf', icon: '🧺' },
   ];
   return (
@@ -80,7 +81,7 @@ export default function Header() {
             <NavLink key={l.to} to={l.to} end={l.end} className="nav-link">
               <span className="nav-icon" aria-hidden="true">{l.icon}</span>
               <span>{l.label}</span>
-              {l.badge > 0 && <span className="badge" aria-label={`${l.badge} waiting for you`}>{l.badge}</span>}
+              {l.badge > 0 && <span className="badge" aria-label={`${l.badge} ${l.badgeLabel ?? 'waiting for you'}`}>{l.badge}</span>}
             </NavLink>
           ))}
         </nav>

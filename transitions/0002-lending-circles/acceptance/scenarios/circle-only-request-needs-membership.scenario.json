@@ -1,0 +1,56 @@
+{
+  "acceptance-scenario": "1",
+  "name": "circle-only-request-needs-membership",
+  "purpose": "A circle-only item can be requested only by someone who shares one of its circles with the owner; joining the circle opens it.",
+  "verifies": [
+    "::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers",
+    "::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation",
+    "::BorrowBox.Lending.Library.BorrowingService",
+    "::BorrowBox.Lending.Library.CircleService"
+  ],
+  "test": "::BorrowBox.CircleAccessTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    }
+  ],
+  "when": [
+    {
+      "step": "request.submitExpectRefusal",
+      "args": {
+        "as": "jo",
+        "item": "bike",
+        "from": "+10",
+        "to": "+11",
+        "status": 403
+      },
+      "text": "Jo, not yet in Riverside Neighbours, asks for Sam's circle-only bike"
+    },
+    {
+      "step": "circle.accept",
+      "args": {
+        "as": "jo",
+        "circle": "Riverside Neighbours"
+      },
+      "text": "Jo accepts Sam's invitation to Riverside Neighbours"
+    }
+  ],
+  "then": [
+    {
+      "step": "request.submit",
+      "args": {
+        "as": "jo",
+        "item": "bike",
+        "from": "+10",
+        "to": "+11",
+        "ref": "j"
+      },
+      "text": "Jo can now ask for the bike"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.RequestToBorrow"
+  }
+}

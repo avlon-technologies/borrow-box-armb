@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS items (
   pickup_area TEXT NOT NULL DEFAULT '',
   photo TEXT,
   hidden INTEGER NOT NULL DEFAULT 0 CHECK (hidden IN (0, 1)),
+  audience TEXT NOT NULL DEFAULT 'everyone' CHECK (audience IN ('everyone', 'circles')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -132,6 +133,63 @@ BEGIN
   WHERE (SELECT owner_id FROM items WHERE id = NEW.item_id) = NEW.borrower_id;
 END;
 
+-- Lending circles (model resource CircleStore). A membership's standing changes; it is never deleted.
+CREATE TABLE IF NOT EXISTS circles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  organiser_id TEXT NOT NULL REFERENCES people(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS memberships (
+  circle_id TEXT NOT NULL REFERENCES circles(id),
+  person_id TEXT NOT NULL REFERENCES people(id),
+  standing TEXT NOT NULL CHECK (standing IN ('invited', 'active', 'declined', 'left', 'removed')),
+  invited_by TEXT REFERENCES people(id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (circle_id, person_id)
+);
+CREATE INDEX IF NOT EXISTS memberships_person ON memberships(person_id, standing);
+
+-- Which circles an item is shared with (part of the item's audience, model resource ItemStore).
+CREATE TABLE IF NOT EXISTS item_circles (
+  item_id TEXT NOT NULL REFERENCES items(id),
+  circle_id TEXT NOT NULL REFERENCES circles(id),
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (item_id, circle_id)
+);
+CREATE INDEX IF NOT EXISTS item_circles_circle ON item_circles(circle_id);
+
+-- Each circle's own append-only activity (read-model CircleActivity is projected from it).
+CREATE TABLE IF NOT EXISTS circle_events (
+  seq INTEGER PRIMARY KEY AUTOINCREMENT,
+  circle_id TEXT NOT NULL REFERENCES circles(id),
+  type TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  subject_id TEXT,
+  item_id TEXT,
+  data TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS circle_events_circle ON circle_events(circle_id, seq);
+
+-- The organiser always stays an active member (OrganiserStaysMember).
+CREATE TRIGGER IF NOT EXISTS memberships_organiser_stays
+BEFORE UPDATE OF standing ON memberships
+WHEN NEW.standing <> 'active' AND NEW.person_id = (SELECT organiser_id FROM circles WHERE id = NEW.circle_id)
+BEGIN
+  SELECT RAISE(ABORT, 'organiser_stays');
+END;
+
+CREATE TRIGGER IF NOT EXISTS memberships_no_delete BEFORE DELETE ON memberships
+BEGIN SELECT RAISE(ABORT, 'membership_history_kept'); END;
+CREATE TRIGGER IF NOT EXISTS circle_events_no_update BEFORE UPDATE ON circle_events
+BEGIN SELECT RAISE(ABORT, 'journal_append_only'); END;
+CREATE TRIGGER IF NOT EXISTS circle_events_no_delete BEFORE DELETE ON circle_events
+BEGIN SELECT RAISE(ABORT, 'journal_append_only'); END;
+
 -- Condition evidence and the activity journal are append-only.
 CREATE TRIGGER IF NOT EXISTS condition_notes_no_update BEFORE UPDATE ON condition_notes
 BEGIN SELECT RAISE(ABORT, 'evidence_append_only'); END;
@@ -143,11 +201,41 @@ CREATE TRIGGER IF NOT EXISTS events_no_delete BEFORE DELETE ON events
 BEGIN SELECT RAISE(ABORT, 'journal_append_only'); END;
 `;
 
+/**
+ * SQL that is true when `requester` can reach `item` through a circle: the requester and the
+ * item's owner are both active members of a circle the item is shared with. The arguments are
+ * SQL expressions, so one rule serves the queries and the trigger below.
+ */
+export function circleReachSql(item, requester, owner) {
+  return `EXISTS (SELECT 1 FROM item_circles ic
+    JOIN memberships mr ON mr.circle_id = ic.circle_id AND mr.person_id = ${requester} AND mr.standing = 'active'
+    JOIN memberships mo ON mo.circle_id = ic.circle_id AND mo.person_id = ${owner} AND mo.standing = 'active'
+    WHERE ic.item_id = ${item})`;
+}
+
+// A new request for a circle-only item needs a circle shared with the owner at that instant
+// (CircleOnlyNeedsSharedCircle). Requests already made are never re-checked
+// (MembershipChangesKeepCommitments), so this guards INSERT only.
+const REACH_TRIGGER = `
+CREATE TRIGGER IF NOT EXISTS reservations_circle_reach
+BEFORE INSERT ON reservations
+WHEN (SELECT audience FROM items WHERE id = NEW.item_id) = 'circles'
+BEGIN
+  SELECT RAISE(ABORT, 'circle_only')
+  WHERE NOT ${circleReachSql('NEW.item_id', 'NEW.borrower_id', '(SELECT owner_id FROM items WHERE id = NEW.item_id)')};
+END;`;
+
 export function openDatabase(file) {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA synchronous = NORMAL;');
   db.exec(SCHEMA);
+  // Databases made before lending circles get the audience column, defaulting to everyone.
+  const hasAudience = db.prepare("SELECT 1 FROM pragma_table_info('items') WHERE name = 'audience'").get();
+  if (!hasAudience) {
+    db.exec("ALTER TABLE items ADD COLUMN audience TEXT NOT NULL DEFAULT 'everyone' CHECK (audience IN ('everyone', 'circles'))");
+  }
+  db.exec(REACH_TRIGGER);
   return db;
 }
 

@@ -1,3 +1,5 @@
+# 2026-11-03T09:48Z, working tree before the lending-circles commit (parent 8f5d780)
+$ continuum package check continuum
 package    borrowbox
 coverage   every check evaluated over the attested state
 intact

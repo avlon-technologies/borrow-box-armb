@@ -118,6 +118,19 @@ export function createAdapter() {
         ctx.assert.equal(res.status, 200);
       },
 
+      'circle.accept': async (ctx, { as, circle }) => {
+        const l = await lib(ctx);
+        const id = l.db.prepare('SELECT id FROM circles WHERE name = ?').get(circle).id;
+        const res = await (await l.as(as)).post(`/circles/${id}/accept`);
+        ctx.assert.equal(res.status, 200, JSON.stringify(res.body));
+      },
+      'circle.remove': async (ctx, { as, circle, member }) => {
+        const l = await lib(ctx);
+        const id = l.db.prepare('SELECT id FROM circles WHERE name = ?').get(circle).id;
+        const res = await (await l.as(as)).post(`/circles/${id}/members/p-${member}/remove`);
+        ctx.assert.equal(res.status, 200, JSON.stringify(res.body));
+      },
+
       'extension.propose': async (ctx, { as, ref, to, ext }) => {
         const l = await lib(ctx);
         const res = await (await l.as(as)).act(refs(ctx)[ref], 'extensions', { proposedEndDate: rel(to) });

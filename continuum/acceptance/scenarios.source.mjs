@@ -110,6 +110,39 @@ const scenarios = [
     ],
     trace: { from: `${S}.Library.RequestToBorrow` },
   },
+  {
+    name: 'circle-only-request-needs-membership',
+    purpose: "A circle-only item can be requested only by someone who shares one of its circles with the owner; joining the circle opens it.",
+    verifies: [`${S}.LendingCircles.CircleOnlyItemsReachOnlyMembers`, `${S}.LendingCircles.CirclesGrowByInvitation`, `${S}.Library.BorrowingService`, `${S}.Library.CircleService`],
+    test: '::BorrowBox.CircleAccessTests',
+    given: [start],
+    when: [
+      { step: 'request.submitExpectRefusal', args: { as: 'jo', item: 'bike', from: '+10', to: '+11', status: 403 }, text: "Jo, not yet in Riverside Neighbours, asks for Sam's circle-only bike" },
+      { step: 'circle.accept', args: { as: 'jo', circle: 'Riverside Neighbours' }, text: "Jo accepts Sam's invitation to Riverside Neighbours" },
+    ],
+    then: [{ step: 'request.submit', args: { as: 'jo', item: 'bike', from: '+10', to: '+11', ref: 'j' }, text: 'Jo can now ask for the bike' }],
+    trace: { from: `${S}.Library.RequestToBorrow` },
+  },
+  {
+    name: 'removal-keeps-commitments',
+    purpose: 'Removing a member refuses their new circle-only requests while their approved reservation and their pending request both carry on.',
+    verifies: [`${S}.LendingCircles.MembershipChangesKeepCommitments`, `${S}.Library.CircleService`, `${S}.Library.BorrowingService`],
+    test: '::BorrowBox.CircleAccessTests',
+    given: [
+      start,
+      { step: 'circle.accept', args: { as: 'jo', circle: 'Riverside Neighbours' }, text: 'Jo joins Riverside Neighbours' },
+      { step: 'loan.approved', args: { owner: 'sam', as: 'jo', item: 'bike', from: '+20', to: '+21', ref: 'c' }, text: "Sam approves Jo's request for days 20-21" },
+      { step: 'request.submit', args: { as: 'jo', item: 'bike', from: '+10', to: '+11', ref: 'r' }, text: 'Jo also asks for days 10-11' },
+    ],
+    when: [{ step: 'circle.remove', args: { as: 'maya', circle: 'Riverside Neighbours', member: 'jo' }, text: 'Maya, the organiser, removes Jo' }],
+    then: [
+      { step: 'request.submitExpectRefusal', args: { as: 'jo', item: 'bike', from: '+30', to: '+31', status: 403 }, text: 'Jo cannot make a new request' },
+      { step: 'loan.status', args: { ref: 'c', status: 'approved' }, text: 'her approved reservation is untouched' },
+      { step: 'request.act', args: { as: 'sam', ref: 'c', action: 'ready' }, text: 'and moves on: Sam marks it ready' },
+      { step: 'request.act', args: { as: 'sam', ref: 'r', action: 'approve' }, text: 'her pending request is still Sam’s to approve' },
+    ],
+    trace: { from: `${S}.Library.RemoveMember` },
+  },
 ];
 
 for (const s of scenarios) {

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useApp } from '../App.jsx';
 import PhotoPicker from '../components/PhotoPicker.jsx';
+import AudiencePicker from '../components/AudiencePicker.jsx';
 import { Button, ErrorState, FormError, Photo, Spinner, useSubmit } from '../components/ui.jsx';
 
 const EMPTY = { title: '', category: '', description: '', lendingRules: '', maxLoanDays: 7, pickupArea: '' };
@@ -16,7 +17,13 @@ export default function ItemForm() {
   const [photo, setPhoto] = useState(null);
   const [existing, setExisting] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [audience, setAudience] = useState({ audience: 'everyone', circleIds: [] });
+  const [myCircles, setMyCircles] = useState([]);
   const { busy, error, setError, run } = useSubmit();
+
+  useEffect(() => {
+    if (!editing) api.circles().then((c) => setMyCircles(c.circles)).catch(() => {});
+  }, [editing]);
 
   useEffect(() => {
     if (!editing) return;
@@ -38,10 +45,11 @@ export default function ItemForm() {
     if (!form.title.trim()) return setError({ message: 'Please add a title.', details: { field: 'title' } });
     if (!form.category) return setError({ message: 'Please choose a category.', details: { field: 'category' } });
     if (!editing && !photo) return setError({ message: 'A photo helps friends recognise it. Please add one.', details: { field: 'photo' } });
-    const body = { ...form, maxLoanDays: Number(form.maxLoanDays), ...(photo ? { photo } : {}) };
+    if (!editing && audience.audience === 'circles' && audience.circleIds.length === 0) return setError({ message: 'Pick at least one circle to share it with.', details: { field: 'circleIds' } });
+    const body = { ...form, maxLoanDays: Number(form.maxLoanDays), ...(photo ? { photo } : {}), ...(editing ? {} : audience) };
     const res = await run((key) => (editing ? api.updateItem(id, body, key) : api.createItem(body, key)));
     if (res) {
-      toast(editing ? 'Saved.' : 'Listed! Friends can now ask to borrow it.');
+      toast(editing ? 'Saved.' : audience.audience === 'circles' ? 'Listed for your circles.' : 'Listed! Friends can now ask to borrow it.');
       navigate(`/items/${res.item.id}`);
     }
   };
@@ -88,6 +96,7 @@ export default function ItemForm() {
             <input value={form.pickupArea} onChange={set('pickupArea')} maxLength={120} placeholder="e.g. Riverside, porch" />
           </label>
         </div>
+        {!editing && <AudiencePicker value={audience} onChange={setAudience} circles={myCircles} idPrefix="new" />}
         <FormError error={error} />
         <div className="row-gap">
           <Button busy={busy}>{editing ? 'Save changes' : 'List it'}</Button>

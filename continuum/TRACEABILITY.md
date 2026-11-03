@@ -1,8 +1,9 @@
 # Traceability: acceptance → model → tests
 
 Model: `continuum/model/borrowbox.adl` (package `avlon.borrowbox` cycle-1, core `adl/1.7`,
-attestation `sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42`).
-Business model: `continuum/business.bdl` (definition `2026-11-02.2`).
+attestation `sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df`,
+changeState `sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7`, which includes lending circles).
+Business model: `continuum/business.bdl` (definition `2026-11-03.1`).
 
 | Acceptance | ADL requirement / rule (DECLARED) | BDL element | Tests that exercise it |
 |---|---|---|---|
@@ -20,18 +21,28 @@ Business model: `continuum/business.bdl` (definition `2026-11-02.2`).
 | A11/A05 duplicates | `RepeatedSubmissionIsHarmless` | | `persistence.test.js` (idempotency, duplicate) · e2e *double-clicked request* |
 | Date policy | policy `CalendarDatePolicy`, rule `RequestsFitTheCalendar` | invariant `RangeIsOrdered` | `lifecycle.test.js` (validation) · `persistence.test.js` (time-zone "today") |
 | A12 keyboard + mobile | (not architecture) | | e2e *keyboard only*, *@mobile* |
+| Circles: create, invite, join, leave, remove | `LendingCircles.CirclesGrowByInvitation`, rules `OnlyMembersInvite`, `OrganiserStaysMember`; commands admitted by `CircleMembership` / `OpenInvitation` / `CircleOrganisership` | entities `Circle`, `Membership` (`MembershipLifecycle`), invariant `OrganiserStaysActive`, unspecified `OrganiserSuccession` | `circles.test.js` · scenario `circle-only-request-needs-membership` · e2e *start a circle* |
+| Circles: everybody or circles only | `LendingCircles.OwnersChooseAudience`, rule `ShareOnlyWhereMember`; command `SetItemAudience` | enum `Audience`, entity `CircleShare`, action `ChooseAudience`, rule `ShareOnlyWhereMember` | `circle-access.test.js` (*only the owner chooses*) · e2e *lend an item just to that circle* |
+| Circles: circle-only requests need a shared circle | `LendingCircles.CircleOnlyItemsReachOnlyMembers`, rule `CircleOnlyNeedsSharedCircle`; `RequestToBorrow` now `requires NonOwnership, ItemReach` | rule `CircleOnlyNeedsSharedCircle` | `circle-access.test.js` (catalog, request, DB trigger) · scenario `circle-only-request-needs-membership` · e2e *joining a circle* |
+| Circles: membership changes keep commitments | `LendingCircles.MembershipChangesKeepCommitments`, rule `MembershipChangesKeepCommitments` | rules `MembershipChangesKeepCommitments`, `LeavingKeepsCommitments`; forbidden `CancelOnMembershipChange` | `circle-access.test.js` (removal, leaving, narrowing, pending kept, removal racing a request) · scenario `removal-keeps-commitments` · e2e *removal* |
 
 The ADL `test` elements (`CatalogAndListingTests`, `RequestLifecycleTests`, `ApprovalConcurrencyTests`,
-`AuthorizationTests`, `HandoffAndEvidenceTests`, `ExtensionTests`, `PersistenceAndIdempotencyTests`)
+`AuthorizationTests`, `HandoffAndEvidenceTests`, `ExtensionTests`, `PersistenceAndIdempotencyTests`,
+`CircleMembershipTests`, `CircleAccessTests`)
 each name the requirements they verify. Every `server/test/*.test.js` file opens with a comment
 naming the model test it realizes, and each acceptance scenario's `test` field points at one of them.
 
 ## Recorded evidence (`continuum/evidence/`)
 
-- `bdl-compile.txt`: BDL valid, 0 errors. 2 warnings (`no-declared-performer` on the two *forbidden*
-  actions), deliberate: a forbidden act has no permitted performer.
+- `bdl-compile.txt`: BDL valid, 0 errors. 8 warnings: `no-declared-performer` on the three *forbidden*
+  actions (deliberate: a forbidden act has no permitted performer), and `effective-performer-set` on
+  the five circle actions granted to `Member` (informational: Owner, Borrower and Organiser specialize
+  Member, so they may perform them too, which is intended).
 - `package-check.txt`: development package intact; every check evaluated over the attested state.
-- `acceptance-run.txt`: `continuum package run`, 6/6 scenarios passed against the real app.
+- `acceptance-run.txt`: `continuum package run`, 8/8 scenarios passed against the real app.
+- `transition-0002-check.txt`: the lending-circles transition checked against checkpoint 0001
+  (`base true`, `identity true`, refused at apply), and a one-operation probe proving that every
+  apply to this model is refused by a Host defect (see below).
 - `assessment.txt`: conformance assessment. **L1 is undetermined** with
   `model/language-version-unsupported`: the assessor does not yet support core `adl/1.7`, which this
   model uses for command admissions (the authorization semantics). It was a deliberate choice to keep
@@ -40,3 +51,16 @@ naming the model test it realizes, and each acceptance scenario's `test` field p
 ## Lifecycle state
 
 The initial state (changeState sha256:8ae3819b…) was **accepted** by the project owner (mike@avlon.ca) on 2026-11-03T02:44:50Z, verified against commit 0992b49 with the suite re-run (6/6). Acceptance fact sha256:38f7355e9703a0b900599bc6390cf86db232be51083abd2804a1725a9328a07c, appended to continuum/workflow.jsonl. Ledger checkpoint 0001 (initial) recorded in continuum/ledger.json and continuum/history/0001-initial.
+
+### Lending circles (transition 0002, not yet a checkpoint)
+
+The lending-circles change is `transitions/0002-lending-circles/`: the `.adl-change`, the BDL
+candidate and its canonical diff, the bindings, the two added scenarios and the adapter. The project
+owner approved it before implementation (`APPROVAL.md`). The Continuum Host refuses **every** apply to
+this model (it adds an `attributes` member to both `Policy` elements and then rejects its own
+result as `adl/structural/unknown-member`). So `apply(A, Δ) = B` is **not proved**, the transition
+cannot get an id, and it cannot be approved, materialized or adopted through `continuum icp`. On the
+owner's instruction, state B was written into `continuum/model/` directly and the package was rebuilt.
+Both A and B compile with 0 errors and 0 warnings. Until the Host is fixed and the transition is
+adopted (or reconciled), `continuum guard ci` reports `lifecycle/guard/state-unrecorded`:
+the live package is not checkpoint 0001.

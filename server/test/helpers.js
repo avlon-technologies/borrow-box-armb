@@ -62,6 +62,7 @@ function client(base, cookie) {
     get: (p) => call('GET', p),
     post: (p, b = {}, h) => call('POST', p, b, h),
     patch: (p, b = {}, h) => call('PATCH', p, b, h),
+    put: (p, b = {}, h) => call('PUT', p, b, h),
     // Convenience wrappers
     request: (itemId, startDate, endDate, note) => call('POST', `/items/${itemId}/requests`, { startDate, endDate, note }),
     act: (id, act, body = {}) => call('POST', `/reservations/${id}/${act}`, body),

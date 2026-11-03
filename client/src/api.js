@@ -49,6 +49,14 @@ export const api = {
   createItem: (body, key) => call('POST', '/items', body, { key }),
   updateItem: (id, body, key) => call('PATCH', `/items/${id}`, body, { key }),
   setHidden: (id, hidden, key) => call('POST', `/items/${id}/visibility`, { hidden }, { key }),
+  setAudience: (id, body, key) => call('PUT', `/items/${id}/audience`, body, { key }),
+
+  circles: () => call('GET', '/circles'),
+  circle: (id) => call('GET', `/circles/${encodeURIComponent(id)}`),
+  createCircle: (body, key) => call('POST', '/circles', body, { key }),
+  invite: (id, personId, key) => call('POST', `/circles/${id}/invitations`, { personId }, { key }),
+  circleAct: (id, act, key) => call('POST', `/circles/${id}/${act}`, {}, { key }),
+  removeMember: (id, personId, key) => call('POST', `/circles/${id}/members/${personId}/remove`, {}, { key }),
 
   reservations: () => call('GET', '/reservations'),
   reservation: (id) => call('GET', `/reservations/${id}`),

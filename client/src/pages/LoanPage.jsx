@@ -297,6 +297,7 @@ export default function LoanPage() {
         <Link to={`/items/${r.item.id}`} className="loan-header-photo"><Photo src={r.item.photoUrl} alt={r.item.title} /></Link>
         <div>
           <div className="row-gap wrap"><Chip tone={c.tone}>{c.label}</Chip>{r.item.hidden && <Chip>Item hidden from new requests</Chip>}</div>
+          {r.borrowerOutsideCircles && <p className="notice">{r.borrower.firstName} asked while you shared a circle. They're no longer in one with you{r.status === 'pending' ? ", but this request still stands — it's yours to decide." : ', and that changes nothing here: this loan carries on as agreed.'}</p>}
           <h1 className="display">{headline(r)}</h1>
           <p className="loan-sub">
             <Link to={`/items/${r.item.id}`}>{r.item.title}</Link> · {r.role === 'owner' ? 'lending to' : 'borrowing from'} <Avatar person={other} size={20} /> <strong>{other.name}</strong>

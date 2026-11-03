@@ -18,8 +18,8 @@
 | | |
 |---|---|
 | package | `avlon.borrowbox` version `cycle-1` (core `adl/1.7`) |
-| attestation (canonical model) | `sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42` |
-| changeState (the digest a `.adl-change` base pin must name) | `sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f` |
+| attestation (canonical model) | `sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df` |
+| changeState (the digest a `.adl-change` base pin must name) | `sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7` |
 | environment | `::BorrowBox.LocalDevelopment` (`model/local-development.adl-binding.json`) |
 
 A copy of the tool's compile result is `model/compile-proof.json`. Do not edit the semantic files: a byte changed there changes the attestation, every binding goes stale, and the package must be rebuilt.
@@ -34,11 +34,17 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 > A warm, trustworthy lending library: people list possessions, friends request dates, and both sides coordinate handoff, use and return.
 
-### Actors (3)
+### Actors (4)
 
 #### `::BorrowBox.Borrower` — Actor [person]
 
 > A person who explores other people's items, requests dates and takes temporary custody. Any member may be a borrower of items they do not own.
+
+- uses: `::BorrowBox`
+
+#### `::BorrowBox.Member` — Actor [person]
+
+> Anyone using BorrowBox, before any item or reservation gives them the owner's or the borrower's part. Circles are formed, joined and looked after by members.
 
 - uses: `::BorrowBox`
 
@@ -62,7 +68,7 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - classification = core
 
-### Capabilitys (5)
+### Capabilitys (6)
 
 #### `::BorrowBox.Lending.CatalogDiscovery` — Capability
 
@@ -76,6 +82,10 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 > Offering one's own possessions for borrowing, with a picture, a description and clear borrowing rules, and withdrawing them from new borrowing.
 
+#### `::BorrowBox.Lending.LendingCircles` — Capability
+
+> Small groups of friends forming circles, inviting each other, and choosing whether an item is offered to everybody or only to the circles its owner belongs to.
+
 #### `::BorrowBox.Lending.LoanCustody` — Capability
 
 > Handing an item over, keeping track of who holds it, and getting it back.
@@ -84,7 +94,7 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 > Agreeing who may borrow an item for which dates.
 
-### Requirements (14)
+### Requirements (18)
 
 #### `::BorrowBox.EveryActionAuthorizedOnServer` — Requirement
 
@@ -92,7 +102,7 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 #### `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability` — Requirement
 
-> Anyone exploring the catalog can see each visible item's photo, owner, lending rules and the dates already committed. (A01)
+> Anyone exploring the catalog can see each item offered to them, with its photo, owner, lending rules and the dates already committed. (A01)
 
 #### `::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved` — Requirement
 
@@ -105,6 +115,22 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 #### `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings` — Requirement
 
 > Only the owner of an item may edit it or change whether it accepts new requests. (A05)
+
+#### `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers` — Requirement
+
+> An item offered only to circles is shown to, and can be requested by, only people who at that moment share one of its circles with its owner.
+
+#### `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation` — Requirement
+
+> Any member may start a circle and becomes its organiser; people join only by accepting an invitation from a current member; only the organiser removes members, and the organiser always stays a member.
+
+#### `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments` — Requirement
+
+> Leaving, removal, or narrowing an item's audience refuses new circle-only requests from then on, but every reservation already made, pending or committed, continues through decision, handoff, extension and return unchanged.
+
+#### `::BorrowBox.Lending.LendingCircles.OwnersChooseAudience` — Requirement
+
+> Only an item's owner decides whether it is offered to everybody or only to chosen circles, and only circles the owner currently belongs to can be chosen.
 
 #### `::BorrowBox.Lending.LoanCustody.HandoffIsAttributed` — Requirement
 
@@ -156,11 +182,15 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 #### `::BorrowBox.Lending.Library` — BoundedContext
 
-> The authority for items, their reservations, loans, condition evidence and the history of who did what.
+> The authority for items, their reservations, loans, condition evidence, the circles items are shared through, and the history of who did what. Circles live here because whether a request is admitted depends on membership at the same instant the request is recorded.
 
-- realizes: `::BorrowBox.Lending.CatalogDiscovery`, `::BorrowBox.Lending.ConditionEvidence`, `::BorrowBox.Lending.ItemListing`, `::BorrowBox.Lending.LoanCustody`, `::BorrowBox.Lending.ReservationCoordination`
+- realizes: `::BorrowBox.Lending.CatalogDiscovery`, `::BorrowBox.Lending.ConditionEvidence`, `::BorrowBox.Lending.ItemListing`, `::BorrowBox.Lending.LendingCircles`, `::BorrowBox.Lending.LoanCustody`, `::BorrowBox.Lending.ReservationCoordination`
 
-### BusinessRules (9)
+### BusinessRules (14)
+
+#### `::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle` — BusinessRule
+
+- statement = A request for an item offered only to circles is refused unless, at the moment it is recorded, the requester and the owner are both active members of a circle the item is shared with. Items offered to everybody need no circle.
 
 #### `::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap` — BusinessRule
 
@@ -182,13 +212,25 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - statement = Ready follows approval, pickup follows ready, return starts only while borrowed, and confirmation follows the start of return.
 
+#### `::BorrowBox.Lending.Library.MembershipChangesKeepCommitments` — BusinessRule
+
+- statement = Leaving, removal and narrowing an item's audience only refuse new circle-only requests; no reservation already made is cancelled, declined or blocked from its next step, and its people keep seeing the item.
+
 #### `::BorrowBox.Lending.Library.NoSelfBorrowing` — BusinessRule
 
 - statement = A request to borrow is refused when the requester owns the item.
 
+#### `::BorrowBox.Lending.Library.OnlyMembersInvite` — BusinessRule
+
+- statement = Only an active member may invite, and only someone not already invited or active in that circle; only the invited person accepts or declines.
+
 #### `::BorrowBox.Lending.Library.OnlyPendingIsDecided` — BusinessRule
 
 - statement = Approve and decline apply only to a pending request; cancel applies to the borrower's own request before pickup.
+
+#### `::BorrowBox.Lending.Library.OrganiserStaysMember` — BusinessRule
+
+- statement = The organiser removes members and can be neither removed nor leave.
 
 #### `::BorrowBox.Lending.Library.OverdueIsInformational` — BusinessRule
 
@@ -198,12 +240,21 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - statement = A requested range starts no earlier than today in the community time zone, ends on or after its start, and is no longer than the item's maximum loan length.
 
-### Commands (15)
+#### `::BorrowBox.Lending.Library.ShareOnlyWhereMember` — BusinessRule
+
+- statement = An owner can share an item only with circles they are an active member of; an item offered only to circles is reachable through a circle only while its owner is still an active member there.
+
+### Commands (22)
 
 #### `::BorrowBox.Lending.Library.AcceptExtension` — Command
 
 - payload = ExtensionAct
 - admissions = {"sender":"::BorrowBox.Owner","evidence":[{"of":"ItemOwnership","for":"reservationId"}]}
+
+#### `::BorrowBox.Lending.Library.AcceptInvitation` — Command
+
+- payload = MembershipAct
+- admissions = {"sender":"::BorrowBox.Member","evidence":[{"of":"OpenInvitation","for":"circleId"}]}
 
 #### `::BorrowBox.Lending.Library.AddConditionNote` — Command
 
@@ -232,10 +283,20 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - payload = ConditionReport
 - admissions = {"sender":"::BorrowBox.Owner","evidence":[{"of":"ItemOwnership","for":"reservationId"}]}
 
+#### `::BorrowBox.Lending.Library.CreateCircle` — Command
+
+- payload = CircleDraft
+- admissions = {"sender":"::BorrowBox.Member"}
+
 #### `::BorrowBox.Lending.Library.DeclineExtension` — Command
 
 - payload = ExtensionAct
 - admissions = {"sender":"::BorrowBox.Owner","evidence":[{"of":"ItemOwnership","for":"reservationId"}]}
+
+#### `::BorrowBox.Lending.Library.DeclineInvitation` — Command
+
+- payload = MembershipAct
+- admissions = {"sender":"::BorrowBox.Member","evidence":[{"of":"OpenInvitation","for":"circleId"}]}
 
 #### `::BorrowBox.Lending.Library.DeclineRequest` — Command
 
@@ -246,6 +307,16 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - payload = ItemChange
 - admissions = {"sender":"::BorrowBox.Owner","evidence":[{"of":"ItemOwnership","for":"itemId"}]}
+
+#### `::BorrowBox.Lending.Library.InviteToCircle` — Command
+
+- payload = CircleInvitation
+- admissions = {"sender":"::BorrowBox.Member","evidence":[{"of":"CircleMembership","for":"circleId"}]}
+
+#### `::BorrowBox.Lending.Library.LeaveCircle` — Command
+
+- payload = MembershipAct
+- admissions = {"sender":"::BorrowBox.Member","evidence":[{"of":"CircleMembership","for":"circleId"}]}
 
 #### `::BorrowBox.Lending.Library.ListItem` — Command
 
@@ -262,10 +333,22 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - payload = ExtensionProposal
 - admissions = {"sender":"::BorrowBox.Borrower","evidence":[{"of":"Borrowership","for":"reservationId"}]}
 
+#### `::BorrowBox.Lending.Library.RemoveMember` — Command
+
+- payload = MemberRemoval
+- admissions = {"sender":"::BorrowBox.Member","evidence":[{"of":"CircleOrganisership","for":"circleId"}]}
+
 #### `::BorrowBox.Lending.Library.RequestToBorrow` — Command
 
 - payload = BorrowRequest
-- admissions = {"sender":"::BorrowBox.Borrower","evidence":[{"of":"NonOwnership","for":"itemId"}]}
+- admissions = {"sender":"::BorrowBox.Borrower","evidence":[{"of":"NonOwnership","for":"itemId"},{"of":"ItemReach","for":"itemId"}]}
+
+#### `::BorrowBox.Lending.Library.SetItemAudience` — Command
+
+> The owner offers the item to everybody, or only to circles they choose among those they currently belong to.
+
+- payload = AudienceChange
+- admissions = {"sender":"::BorrowBox.Owner","evidence":[{"of":"ItemOwnership","for":"itemId"}]}
 
 #### `::BorrowBox.Lending.Library.SetItemVisibility` — Command
 
@@ -277,7 +360,12 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - payload = ConditionReport
 - admissions = {"sender":"::BorrowBox.Borrower","evidence":[{"of":"Borrowership","for":"reservationId"}]}
 
-### Events (12)
+### Events (19)
+
+#### `::BorrowBox.Lending.Library.CircleCreated` — Event
+
+- payload = CircleRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
 
 #### `::BorrowBox.Lending.Library.ConditionRecorded` — Event
 
@@ -299,9 +387,41 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - payload = ExtensionRecord
 - DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
 
+#### `::BorrowBox.Lending.Library.InvitationAccepted` — Event
+
+- payload = MembershipRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
+#### `::BorrowBox.Lending.Library.InvitationDeclined` — Event
+
+- payload = MembershipRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
+#### `::BorrowBox.Lending.Library.ItemAudienceChanged` — Event
+
+- payload = AudienceRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
 #### `::BorrowBox.Lending.Library.ItemReadied` — Event
 
 - payload = ReservationRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
+#### `::BorrowBox.Lending.Library.MemberInvited` — Event
+
+- payload = MembershipRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
+#### `::BorrowBox.Lending.Library.MemberLeft` — Event
+
+- payload = MembershipRecord
+- DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
+
+#### `::BorrowBox.Lending.Library.MemberRemoved` — Event
+
+> The person is no longer a member. Nothing they already arranged changes.
+
+- payload = MembershipRecord
 - DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
 
 #### `::BorrowBox.Lending.Library.PickupConfirmed` — Event
@@ -341,11 +461,17 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - payload = ReservationRecord
 - DeliveryExpectation[ordering=ordered; delivery=at-least-once; durability=durable]
 
-### Resources (5)
+### Resources (6)
 
 #### `::BorrowBox.Lending.Library.ActivityJournal` — Resource [data-store]
 
 > Append-only record of every accepted action: who, what, when, on which item and reservation.
+
+- PersistenceExpectation[durability=durable; consistency=strong]
+
+#### `::BorrowBox.Lending.Library.CircleStore` — Resource [data-store]
+
+> Every circle with its organiser, and every membership with its standing (invited, active, declined, left, removed). Ending a membership changes its standing; nothing is deleted. It also keeps each circle's own append-only activity, kept apart from the loan journal so that one service writes each store.
 
 - PersistenceExpectation[durability=durable; consistency=strong]
 
@@ -357,7 +483,7 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 #### `::BorrowBox.Lending.Library.ItemStore` — Resource [data-store]
 
-> Every listed item with its owner, rules, photo and visibility. Hiding an item is a flag, never a deletion.
+> Every listed item with its owner, rules, photo, visibility, audience (everybody or circles only) and the circles it is shared with. Hiding or narrowing the audience is a setting, never a deletion.
 
 - PersistenceExpectation[durability=durable; consistency=strong]
 
@@ -373,7 +499,13 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - PersistenceExpectation[durability=durable; consistency=strong]
 
-### ReadModel (1)
+### ReadModels (2)
+
+#### `::BorrowBox.Lending.Library.CircleActivity` — ReadModel
+
+> The human timeline of one circle: who started it, who was invited, joined, left or was removed, and which items were shared with it.
+
+- projectsFrom: `::BorrowBox.Lending.Library.CircleCreated`, `::BorrowBox.Lending.Library.InvitationAccepted`, `::BorrowBox.Lending.Library.InvitationDeclined`, `::BorrowBox.Lending.Library.ItemAudienceChanged`, `::BorrowBox.Lending.Library.MemberInvited`, `::BorrowBox.Lending.Library.MemberLeft`, `::BorrowBox.Lending.Library.MemberRemoved`
 
 #### `::BorrowBox.Lending.Library.LoanHistory` — ReadModel
 
@@ -381,22 +513,22 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - projectsFrom: `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`
 
-### Services (2)
+### Services (3)
 
 #### `::BorrowBox.Lending.Library.BorrowingService` — Service
 
 > Decides requests, carries each loan through handoff and return, records condition evidence and extensions, and keeps the history.
 
 - `on RequestToBorrow -> all-of RequestSubmitted correlate RequestSubmitted payload.itemId = payload.itemId`; `on ApproveRequest -> all-of RequestApproved correlate RequestApproved payload.reservationId = payload.reservationId`; `on DeclineRequest -> all-of RequestDeclined correlate RequestDeclined payload.reservationId = payload.reservationId`; `on CancelRequest -> all-of RequestCancelled correlate RequestCancelled payload.reservationId = payload.reservationId`; `on MarkReady -> all-of ItemReadied correlate ItemReadied payload.reservationId = payload.reservationId`; `on ConfirmPickup -> all-of PickupConfirmed, ConditionRecorded correlate PickupConfirmed payload.reservationId = payload.reservationId correlate ConditionRecorded payload.reservationId = payload.reservationId`; `on StartReturn -> all-of ReturnStarted, ConditionRecorded correlate ReturnStarted payload.reservationId = payload.reservationId correlate ConditionRecorded payload.reservationId = payload.reservationId`; `on ConfirmReturn -> all-of ReturnConfirmed, ConditionRecorded correlate ReturnConfirmed payload.reservationId = payload.reservationId correlate ConditionRecorded payload.reservationId = payload.reservationId`; `on AddConditionNote -> all-of ConditionRecorded correlate ConditionRecorded payload.reservationId = payload.reservationId`; `on ProposeExtension -> all-of ExtensionProposed correlate ExtensionProposed payload.reservationId = payload.reservationId`; `on AcceptExtension -> all-of ExtensionAccepted correlate ExtensionAccepted payload.extensionId = payload.extensionId`; `on DeclineExtension -> all-of ExtensionDeclined correlate ExtensionDeclined payload.extensionId = payload.extensionId`; `on RequestSubmitted -> none`; `on RequestApproved -> none`; `on RequestDeclined -> none`; `on RequestCancelled -> none`; `on ItemReadied -> none`; `on PickupConfirmed -> none`; `on ReturnStarted -> none`; `on ReturnConfirmed -> none`; `on ExtensionProposed -> none`; `on ExtensionAccepted -> none`; `on ExtensionDeclined -> none`; `on ConditionRecorded -> none`
-- applies: `::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap`, `::BorrowBox.Lending.Library.EvidenceIsAppendOnly`, `::BorrowBox.Lending.Library.ExtensionRecheck`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.LoanStepsInOrder`, `::BorrowBox.Lending.Library.NoSelfBorrowing`, `::BorrowBox.Lending.Library.OnlyPendingIsDecided`, `::BorrowBox.Lending.Library.OverdueIsInformational`, `::BorrowBox.Lending.Library.RequestsFitTheCalendar`
+- applies: `::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle`, `::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap`, `::BorrowBox.Lending.Library.EvidenceIsAppendOnly`, `::BorrowBox.Lending.Library.ExtensionRecheck`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.LoanStepsInOrder`, `::BorrowBox.Lending.Library.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.Library.NoSelfBorrowing`, `::BorrowBox.Lending.Library.OnlyPendingIsDecided`, `::BorrowBox.Lending.Library.OverdueIsInformational`, `::BorrowBox.Lending.Library.RequestsFitTheCalendar`
 - deployedAs: `::BorrowBox.WebApp`
 - governedBy: `::BorrowBox.CalendarDatePolicy`, `::BorrowBox.ServerSideAuthorization`
 - handles: `::BorrowBox.Lending.Library.AcceptExtension`, `::BorrowBox.Lending.Library.AddConditionNote`, `::BorrowBox.Lending.Library.ApproveRequest`, `::BorrowBox.Lending.Library.CancelRequest`, `::BorrowBox.Lending.Library.ConfirmPickup`, `::BorrowBox.Lending.Library.ConfirmReturn`, `::BorrowBox.Lending.Library.DeclineExtension`, `::BorrowBox.Lending.Library.DeclineRequest`, `::BorrowBox.Lending.Library.MarkReady`, `::BorrowBox.Lending.Library.ProposeExtension`, `::BorrowBox.Lending.Library.RequestToBorrow`, `::BorrowBox.Lending.Library.StartReturn`
 - projects: `::BorrowBox.Lending.Library.LoanHistory`
 - publishes: `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`
-- reads: `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.LoanHistory`, `::BorrowBox.Lending.Library.ReservationStore`
+- reads: `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.LoanHistory`, `::BorrowBox.Lending.Library.ReservationStore`
 - realizes: `::BorrowBox.Lending.ConditionEvidence`, `::BorrowBox.Lending.LoanCustody`, `::BorrowBox.Lending.ReservationCoordination`
-- satisfies: `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved`, `::BorrowBox.Lending.LoanCustody.HandoffIsAttributed`, `::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable`, `::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap`, `::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle`, `::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts`, `::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing`, `::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending`, `::BorrowBox.RepeatedSubmissionIsHarmless`, `::BorrowBox.StateSurvivesRestart`
+- satisfies: `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved`, `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers`, `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.LoanCustody.HandoffIsAttributed`, `::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable`, `::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap`, `::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle`, `::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts`, `::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing`, `::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending`, `::BorrowBox.RepeatedSubmissionIsHarmless`, `::BorrowBox.StateSurvivesRestart`
 - subscribesTo: `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`
 - writes: `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`
 
@@ -404,15 +536,33 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 > Accepts owners' listing changes and answers catalog searches with availability.
 
-- `on ListItem -> none`; `on EditItem -> none`; `on SetItemVisibility -> none`
-- applies: `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`
+- `on ListItem -> none`; `on EditItem -> none`; `on SetItemVisibility -> none`; `on SetItemAudience -> all-of ItemAudienceChanged correlate ItemAudienceChanged payload.itemId = payload.itemId`
+- applies: `::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.ShareOnlyWhereMember`
 - deployedAs: `::BorrowBox.WebApp`
 - governedBy: `::BorrowBox.ServerSideAuthorization`
-- handles: `::BorrowBox.Lending.Library.EditItem`, `::BorrowBox.Lending.Library.ListItem`, `::BorrowBox.Lending.Library.SetItemVisibility`
-- reads: `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`
+- handles: `::BorrowBox.Lending.Library.EditItem`, `::BorrowBox.Lending.Library.ListItem`, `::BorrowBox.Lending.Library.SetItemAudience`, `::BorrowBox.Lending.Library.SetItemVisibility`
+- publishes: `::BorrowBox.Lending.Library.ItemAudienceChanged`
+- reads: `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`
 - realizes: `::BorrowBox.Lending.CatalogDiscovery`, `::BorrowBox.Lending.ItemListing`
-- satisfies: `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability`, `::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments`, `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings`
+- satisfies: `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability`, `::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments`, `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings`, `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers`, `::BorrowBox.Lending.LendingCircles.OwnersChooseAudience`
 - writes: `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`
+
+#### `::BorrowBox.Lending.Library.CircleService` — Service
+
+> Forms circles, carries invitations and memberships through their lifecycle, and keeps each circle's history. It never touches a reservation.
+
+- `on CreateCircle -> all-of CircleCreated correlate CircleCreated payload.name = payload.name`; `on InviteToCircle -> all-of MemberInvited correlate MemberInvited payload.circleId = payload.circleId`; `on AcceptInvitation -> all-of InvitationAccepted correlate InvitationAccepted payload.circleId = payload.circleId`; `on DeclineInvitation -> all-of InvitationDeclined correlate InvitationDeclined payload.circleId = payload.circleId`; `on LeaveCircle -> all-of MemberLeft correlate MemberLeft payload.circleId = payload.circleId`; `on RemoveMember -> all-of MemberRemoved correlate MemberRemoved payload.circleId = payload.circleId`; `on CircleCreated -> none`; `on MemberInvited -> none`; `on InvitationAccepted -> none`; `on InvitationDeclined -> none`; `on MemberLeft -> none`; `on MemberRemoved -> none`; `on ItemAudienceChanged -> none`
+- applies: `::BorrowBox.Lending.Library.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.Library.OnlyMembersInvite`, `::BorrowBox.Lending.Library.OrganiserStaysMember`
+- deployedAs: `::BorrowBox.WebApp`
+- governedBy: `::BorrowBox.ServerSideAuthorization`
+- handles: `::BorrowBox.Lending.Library.AcceptInvitation`, `::BorrowBox.Lending.Library.CreateCircle`, `::BorrowBox.Lending.Library.DeclineInvitation`, `::BorrowBox.Lending.Library.InviteToCircle`, `::BorrowBox.Lending.Library.LeaveCircle`, `::BorrowBox.Lending.Library.RemoveMember`
+- projects: `::BorrowBox.Lending.Library.CircleActivity`
+- publishes: `::BorrowBox.Lending.Library.CircleCreated`, `::BorrowBox.Lending.Library.InvitationAccepted`, `::BorrowBox.Lending.Library.InvitationDeclined`, `::BorrowBox.Lending.Library.MemberInvited`, `::BorrowBox.Lending.Library.MemberLeft`, `::BorrowBox.Lending.Library.MemberRemoved`
+- reads: `::BorrowBox.Lending.Library.CircleActivity`, `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.ItemStore`
+- realizes: `::BorrowBox.Lending.LendingCircles`
+- satisfies: `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation`, `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments`, `::BorrowBox.RepeatedSubmissionIsHarmless`, `::BorrowBox.StateSurvivesRestart`
+- subscribesTo: `::BorrowBox.Lending.Library.CircleCreated`, `::BorrowBox.Lending.Library.InvitationAccepted`, `::BorrowBox.Lending.Library.InvitationDeclined`, `::BorrowBox.Lending.Library.ItemAudienceChanged`, `::BorrowBox.Lending.Library.MemberInvited`, `::BorrowBox.Lending.Library.MemberLeft`, `::BorrowBox.Lending.Library.MemberRemoved`
+- writes: `::BorrowBox.Lending.Library.CircleStore`
 
 ### API (1)
 
@@ -437,7 +587,7 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 > An evaluator's or developer's machine.
 
-### Tests (7)
+### Tests (9)
 
 #### `::BorrowBox.ApprovalConcurrencyTests` — Test
 
@@ -456,6 +606,18 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 > Catalog search, item detail with availability, owner-only edit and hide, hidden items refuse new requests but keep reservations.
 
 - verifies: `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability`, `::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments`, `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings`, `::BorrowBox.Lending.Library.CatalogService`
+
+#### `::BorrowBox.CircleAccessTests` — Test
+
+> Circle-only items are seen and requested only through a shared circle; removal, leaving and narrowing the audience refuse new requests while pending and committed reservations continue to return; removal racing a request.
+
+- verifies: `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers`, `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.LendingCircles.OwnersChooseAudience`, `::BorrowBox.Lending.Library.BorrowingService`, `::BorrowBox.Lending.Library.CatalogService`
+
+#### `::BorrowBox.CircleMembershipTests` — Test
+
+> Creating a circle, inviting, accepting and declining, leaving and removal; only members invite, only the organiser removes, the organiser stays.
+
+- verifies: `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation`, `::BorrowBox.Lending.Library.CircleService`
 
 #### `::BorrowBox.ExtensionTests` — Test
 
@@ -481,7 +643,17 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - verifies: `::BorrowBox.Lending.Library.BorrowingService`, `::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle`, `::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing`, `::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending`
 
-### TypeDefinitions (17)
+### TypeDefinitions (29)
+
+#### `::BorrowBox.Lending.Library.AudienceChange` — TypeDefinition v1
+
+- form = record
+- fields[itemId=text; audience=text; circleIds=list(text)]
+
+#### `::BorrowBox.Lending.Library.AudienceRecord` — TypeDefinition v1
+
+- form = record
+- fields[itemId=text; audience=text; circleIds=list(text)]
 
 #### `::BorrowBox.Lending.Library.BorrowRequest` — TypeDefinition v1
 
@@ -502,6 +674,31 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 - form = record
 - fields[text=optional(text); category=optional(text); availableFrom=optional(date); availableTo=optional(date)]
+
+#### `::BorrowBox.Lending.Library.CircleDraft` — TypeDefinition v1
+
+- form = record
+- fields[name=text; description=optional(text)]
+
+#### `::BorrowBox.Lending.Library.CircleInvitation` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; inviteeId=text]
+
+#### `::BorrowBox.Lending.Library.CircleMembership` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; memberId=text]
+
+#### `::BorrowBox.Lending.Library.CircleOrganisership` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; organiserId=text]
+
+#### `::BorrowBox.Lending.Library.CircleRecord` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; name=text; organiserId=text]
 
 #### `::BorrowBox.Lending.Library.ConditionRecord` — TypeDefinition v1
 
@@ -543,15 +740,40 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 - form = record
 - fields[itemId=text; ownerId=text]
 
+#### `::BorrowBox.Lending.Library.ItemReach` — TypeDefinition v1
+
+- form = record
+- fields[itemId=text; requesterId=text]
+
 #### `::BorrowBox.Lending.Library.ItemRecord` — TypeDefinition v1
 
 - form = record
 - fields[itemId=text; ownerId=text; title=text; hidden=boolean]
 
+#### `::BorrowBox.Lending.Library.MemberRemoval` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; memberId=text]
+
+#### `::BorrowBox.Lending.Library.MembershipAct` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text]
+
+#### `::BorrowBox.Lending.Library.MembershipRecord` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; memberId=text; standing=text; actorId=text]
+
 #### `::BorrowBox.Lending.Library.NonOwnership` — TypeDefinition v1
 
 - form = record
 - fields[itemId=text; requesterId=text]
+
+#### `::BorrowBox.Lending.Library.OpenInvitation` — TypeDefinition v1
+
+- form = record
+- fields[circleId=text; inviteeId=text]
 
 #### `::BorrowBox.Lending.Library.ReservationAct` — TypeDefinition v1
 
@@ -572,36 +794,51 @@ Every element below is DECLARED by the model, cited by its root-anchored qualifi
 
 Derived from the model's declarations, in the order a reader needs. Each line names its source.
 
-- **`::BorrowBox.Lending.Library.BorrowingService`** handles `::BorrowBox.Lending.Library.AcceptExtension`, `::BorrowBox.Lending.Library.AddConditionNote`, `::BorrowBox.Lending.Library.ApproveRequest`, `::BorrowBox.Lending.Library.CancelRequest`, `::BorrowBox.Lending.Library.ConfirmPickup`, `::BorrowBox.Lending.Library.ConfirmReturn`, `::BorrowBox.Lending.Library.DeclineExtension`, `::BorrowBox.Lending.Library.DeclineRequest`, `::BorrowBox.Lending.Library.MarkReady`, `::BorrowBox.Lending.Library.ProposeExtension`, `::BorrowBox.Lending.Library.RequestToBorrow`, `::BorrowBox.Lending.Library.StartReturn`; subscribes to `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`; publishes `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`; writes `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`; reads `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.LoanHistory`, `::BorrowBox.Lending.Library.ReservationStore`; produces the view `::BorrowBox.Lending.Library.LoanHistory`; applies `::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap`, `::BorrowBox.Lending.Library.EvidenceIsAppendOnly`, `::BorrowBox.Lending.Library.ExtensionRecheck`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.LoanStepsInOrder`, `::BorrowBox.Lending.Library.NoSelfBorrowing`, `::BorrowBox.Lending.Library.OnlyPendingIsDecided`, `::BorrowBox.Lending.Library.OverdueIsInformational`, `::BorrowBox.Lending.Library.RequestsFitTheCalendar`. Its Reactions (`on X -> …`) are closed-world causal contracts: on consuming X it emits exactly the named consequences (`one-of`: exactly one; `-> none`: nothing).
-- **`::BorrowBox.Lending.Library.CatalogService`** handles `::BorrowBox.Lending.Library.EditItem`, `::BorrowBox.Lending.Library.ListItem`, `::BorrowBox.Lending.Library.SetItemVisibility`; writes `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`; reads `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`; applies `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`. Its Reactions (`on X -> …`) are closed-world causal contracts: on consuming X it emits exactly the named consequences (`one-of`: exactly one; `-> none`: nothing).
+- **`::BorrowBox.Lending.Library.BorrowingService`** handles `::BorrowBox.Lending.Library.AcceptExtension`, `::BorrowBox.Lending.Library.AddConditionNote`, `::BorrowBox.Lending.Library.ApproveRequest`, `::BorrowBox.Lending.Library.CancelRequest`, `::BorrowBox.Lending.Library.ConfirmPickup`, `::BorrowBox.Lending.Library.ConfirmReturn`, `::BorrowBox.Lending.Library.DeclineExtension`, `::BorrowBox.Lending.Library.DeclineRequest`, `::BorrowBox.Lending.Library.MarkReady`, `::BorrowBox.Lending.Library.ProposeExtension`, `::BorrowBox.Lending.Library.RequestToBorrow`, `::BorrowBox.Lending.Library.StartReturn`; subscribes to `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`; publishes `::BorrowBox.Lending.Library.ConditionRecorded`, `::BorrowBox.Lending.Library.ExtensionAccepted`, `::BorrowBox.Lending.Library.ExtensionDeclined`, `::BorrowBox.Lending.Library.ExtensionProposed`, `::BorrowBox.Lending.Library.ItemReadied`, `::BorrowBox.Lending.Library.PickupConfirmed`, `::BorrowBox.Lending.Library.RequestApproved`, `::BorrowBox.Lending.Library.RequestCancelled`, `::BorrowBox.Lending.Library.RequestDeclined`, `::BorrowBox.Lending.Library.RequestSubmitted`, `::BorrowBox.Lending.Library.ReturnConfirmed`, `::BorrowBox.Lending.Library.ReturnStarted`; writes `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`; reads `::BorrowBox.Lending.Library.ActivityJournal`, `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.EvidenceStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.LoanHistory`, `::BorrowBox.Lending.Library.ReservationStore`; produces the view `::BorrowBox.Lending.Library.LoanHistory`; applies `::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle`, `::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap`, `::BorrowBox.Lending.Library.EvidenceIsAppendOnly`, `::BorrowBox.Lending.Library.ExtensionRecheck`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.LoanStepsInOrder`, `::BorrowBox.Lending.Library.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.Library.NoSelfBorrowing`, `::BorrowBox.Lending.Library.OnlyPendingIsDecided`, `::BorrowBox.Lending.Library.OverdueIsInformational`, `::BorrowBox.Lending.Library.RequestsFitTheCalendar`. Its Reactions (`on X -> …`) are closed-world causal contracts: on consuming X it emits exactly the named consequences (`one-of`: exactly one; `-> none`: nothing).
+- **`::BorrowBox.Lending.Library.CatalogService`** handles `::BorrowBox.Lending.Library.EditItem`, `::BorrowBox.Lending.Library.ListItem`, `::BorrowBox.Lending.Library.SetItemAudience`, `::BorrowBox.Lending.Library.SetItemVisibility`; publishes `::BorrowBox.Lending.Library.ItemAudienceChanged`; writes `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`; reads `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.ItemStore`, `::BorrowBox.Lending.Library.PhotoStore`, `::BorrowBox.Lending.Library.ReservationStore`; applies `::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle`, `::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`, `::BorrowBox.Lending.Library.ShareOnlyWhereMember`. Its Reactions (`on X -> …`) are closed-world causal contracts: on consuming X it emits exactly the named consequences (`one-of`: exactly one; `-> none`: nothing).
+- **`::BorrowBox.Lending.Library.CircleService`** handles `::BorrowBox.Lending.Library.AcceptInvitation`, `::BorrowBox.Lending.Library.CreateCircle`, `::BorrowBox.Lending.Library.DeclineInvitation`, `::BorrowBox.Lending.Library.InviteToCircle`, `::BorrowBox.Lending.Library.LeaveCircle`, `::BorrowBox.Lending.Library.RemoveMember`; subscribes to `::BorrowBox.Lending.Library.CircleCreated`, `::BorrowBox.Lending.Library.InvitationAccepted`, `::BorrowBox.Lending.Library.InvitationDeclined`, `::BorrowBox.Lending.Library.ItemAudienceChanged`, `::BorrowBox.Lending.Library.MemberInvited`, `::BorrowBox.Lending.Library.MemberLeft`, `::BorrowBox.Lending.Library.MemberRemoved`; publishes `::BorrowBox.Lending.Library.CircleCreated`, `::BorrowBox.Lending.Library.InvitationAccepted`, `::BorrowBox.Lending.Library.InvitationDeclined`, `::BorrowBox.Lending.Library.MemberInvited`, `::BorrowBox.Lending.Library.MemberLeft`, `::BorrowBox.Lending.Library.MemberRemoved`; writes `::BorrowBox.Lending.Library.CircleStore`; reads `::BorrowBox.Lending.Library.CircleActivity`, `::BorrowBox.Lending.Library.CircleStore`, `::BorrowBox.Lending.Library.ItemStore`; produces the view `::BorrowBox.Lending.Library.CircleActivity`; applies `::BorrowBox.Lending.Library.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.Library.OnlyMembersInvite`, `::BorrowBox.Lending.Library.OrganiserStaysMember`. Its Reactions (`on X -> …`) are closed-world causal contracts: on consuming X it emits exactly the named consequences (`one-of`: exactly one; `-> none`: nothing).
+- **`::BorrowBox.Lending.Library.CircleOnlyNeedsSharedCircle`**: "A request for an item offered only to circles is refused unless, at the moment it is recorded, the requester and the owner are both active members of a circle the item is shared with. Items offered to everybody need no circle." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.CommittedReservationsNeverOverlap`**: "A request may be approved only if its inclusive range overlaps no other approved, ready, borrowed or returning reservation of the same item; the check and the commit are one atomic act." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.EvidenceIsAppendOnly`**: "Condition evidence is only ever added; an owner who disagrees with the borrower's account records their own evidence marked as a disagreement, and both remain." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.ExtensionRecheck`**: "An extension may be accepted only while the loan is open and only if the days between the current and proposed due date overlap no other commitment for the item." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.HiddenItemsTakeNoNewRequests`**: "A request to borrow a hidden item is refused; hiding changes nothing about requests and loans already made." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.LoanStepsInOrder`**: "Ready follows approval, pickup follows ready, return starts only while borrowed, and confirmation follows the start of return." — applied by whatever declares `applies` to it.
+- **`::BorrowBox.Lending.Library.MembershipChangesKeepCommitments`**: "Leaving, removal and narrowing an item's audience only refuse new circle-only requests; no reservation already made is cancelled, declined or blocked from its next step, and its people keep seeing the item." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.NoSelfBorrowing`**: "A request to borrow is refused when the requester owns the item." — applied by whatever declares `applies` to it.
+- **`::BorrowBox.Lending.Library.OnlyMembersInvite`**: "Only an active member may invite, and only someone not already invited or active in that circle; only the invited person accepts or declines." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.OnlyPendingIsDecided`**: "Approve and decline apply only to a pending request; cancel applies to the borrower's own request before pickup." — applied by whatever declares `applies` to it.
+- **`::BorrowBox.Lending.Library.OrganiserStaysMember`**: "The organiser removes members and can be neither removed nor leave." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.OverdueIsInformational`**: "A loan whose due date is before today in the community time zone is overdue; being overdue blocks nothing about returning it." — applied by whatever declares `applies` to it.
 - **`::BorrowBox.Lending.Library.RequestsFitTheCalendar`**: "A requested range starts no earlier than today in the community time zone, ends on or after its start, and is no longer than the item's maximum loan length." — applied by whatever declares `applies` to it.
+- **`::BorrowBox.Lending.Library.ShareOnlyWhereMember`**: "An owner can share an item only with circles they are an active member of; an item offered only to circles is reachable through a circle only while its owner is still an active member there." — applied by whatever declares `applies` to it.
 
 **Not declared by the model — and therefore not for the implementation to invent:** anything absent above. Where the implementation needs a behaviour, a message, a store, a consumer or an ordering the model does not declare, follow §6.
 
 ## 4. Technology realization — environment `LocalDevelopment`
 
-Source: `model/local-development.adl-binding.json` (applies to attestation `sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42`; environment completeness passed; binding digest `sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d`).
+Source: `model/local-development.adl-binding.json` (applies to attestation `sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df`; environment completeness passed; binding digest `sha256:147f9993340597c27e704508efdcbf30d59914c4b968f5b18981c7d64f65efb7`).
 
 | element | kind | technology | configuration |
 |---|---|---|---|
 | `::BorrowBox.Lending.Library.ActivityJournal` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-file** | `{"file":"data/borrowbox.sqlite","table":"events"}` |
 | `::BorrowBox.Lending.Library.BorrowingService` | Service | `avlon.borrowbox.bindings.localdevelopment` / **in-process-module** | `{"module":"server/src/borrowing.js"}` |
 | `::BorrowBox.Lending.Library.CatalogService` | Service | `avlon.borrowbox.bindings.localdevelopment` / **in-process-module** | `{"module":"server/src/catalog.js"}` |
+| `::BorrowBox.Lending.Library.CircleCreated` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"CircleCreated"}` |
+| `::BorrowBox.Lending.Library.CircleService` | Service | `avlon.borrowbox.bindings.localdevelopment` / **in-process-module** | `{"module":"server/src/circles.js"}` |
+| `::BorrowBox.Lending.Library.CircleStore` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-file** | `{"file":"data/borrowbox.sqlite","table":"circles, memberships, circle_events"}` |
 | `::BorrowBox.Lending.Library.ConditionRecorded` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"ConditionRecorded"}` |
 | `::BorrowBox.Lending.Library.EvidenceStore` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-file** | `{"file":"data/borrowbox.sqlite","table":"condition_notes"}` |
 | `::BorrowBox.Lending.Library.ExtensionAccepted` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"ExtensionAccepted"}` |
 | `::BorrowBox.Lending.Library.ExtensionDeclined` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"ExtensionDeclined"}` |
 | `::BorrowBox.Lending.Library.ExtensionProposed` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"ExtensionProposed"}` |
+| `::BorrowBox.Lending.Library.InvitationAccepted` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"InvitationAccepted"}` |
+| `::BorrowBox.Lending.Library.InvitationDeclined` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"InvitationDeclined"}` |
+| `::BorrowBox.Lending.Library.ItemAudienceChanged` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"ItemAudienceChanged"}` |
 | `::BorrowBox.Lending.Library.ItemReadied` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"ItemReadied"}` |
-| `::BorrowBox.Lending.Library.ItemStore` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-file** | `{"file":"data/borrowbox.sqlite","table":"items"}` |
+| `::BorrowBox.Lending.Library.ItemStore` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-file** | `{"file":"data/borrowbox.sqlite","table":"items, item_circles"}` |
+| `::BorrowBox.Lending.Library.MemberInvited` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"MemberInvited"}` |
+| `::BorrowBox.Lending.Library.MemberLeft` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"MemberLeft"}` |
+| `::BorrowBox.Lending.Library.MemberRemoved` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"circle_events","type":"MemberRemoved"}` |
 | `::BorrowBox.Lending.Library.PhotoStore` | Resource | `avlon.borrowbox.bindings.localdevelopment` / **local-directory** | `{"directory":"data/uploads"}` |
 | `::BorrowBox.Lending.Library.PickupConfirmed` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"PickupConfirmed"}` |
 | `::BorrowBox.Lending.Library.RequestApproved` | Event | `avlon.borrowbox.bindings.localdevelopment` / **sqlite-journal** | `{"journal":"events","type":"RequestApproved"}` |
@@ -619,14 +856,16 @@ Source: `model/local-development.adl-binding.json` (applies to attestation `sha2
 implementation  →  architecture / conformance scenarios (acceptance/)
 ```
 
-This model declares no Agent, so no model provider — fake or real — takes part: the scenarios run against your adapter over the implementation. `acceptance/README.md` is the contract: the step vocabulary the adapter must bind (19 distinct keys), the scenarios, what each verifies, and the derived traces.
+This model declares no Agent, so no model provider — fake or real — takes part: the scenarios run against your adapter over the implementation. `acceptance/README.md` is the contract: the step vocabulary the adapter must bind (21 distinct keys), the scenarios, what each verifies, and the derived traces.
 
 | scenario | verifies |
 |---|---|
+| `circle-only-request-needs-membership` | `::BorrowBox.Lending.LendingCircles.CircleOnlyItemsReachOnlyMembers`, `::BorrowBox.Lending.LendingCircles.CirclesGrowByInvitation`, `::BorrowBox.Lending.Library.BorrowingService`, `::BorrowBox.Lending.Library.CircleService` |
 | `extension-recheck` | `::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts`, `::BorrowBox.Lending.Library.BorrowingService` |
 | `full-loan-journey` | `::BorrowBox.Lending.LoanCustody.HandoffIsAttributed`, `::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved`, `::BorrowBox.Lending.Library.BorrowingService` |
 | `hidden-item-keeps-reservations` | `::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments`, `::BorrowBox.Lending.Library.CatalogService` |
 | `overlapping-approval-refused` | `::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap`, `::BorrowBox.Lending.Library.BorrowingService` |
+| `removal-keeps-commitments` | `::BorrowBox.Lending.LendingCircles.MembershipChangesKeepCommitments`, `::BorrowBox.Lending.Library.CircleService`, `::BorrowBox.Lending.Library.BorrowingService` |
 | `self-borrow-refused` | `::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing`, `::BorrowBox.EveryActionAuthorizedOnServer`, `::BorrowBox.Lending.Library.BorrowingService` |
 | `state-survives-restart` | `::BorrowBox.StateSurvivesRestart`, `::BorrowBox.RepeatedSubmissionIsHarmless`, `::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending`, `::BorrowBox.Lending.Library.BorrowingService` |
 
@@ -635,7 +874,7 @@ node acceptance/run.mjs --check                 # the scenarios are well-formed 
 node acceptance/run.mjs --adapter acceptance/adapter.mjs   # execute them against YOUR adapter
 ```
 
-Requirements no scenario verifies (a coverage gap to close, on the package side): `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability`, `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings`, `::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable`, `::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle`.
+Requirements no scenario verifies (a coverage gap to close, on the package side): `::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability`, `::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings`, `::BorrowBox.Lending.LendingCircles.OwnersChooseAudience`, `::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable`, `::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle`.
 
 ### Derived behavioural traces
 
@@ -654,7 +893,7 @@ If implementing requires a behaviour, message, store, consumer, ordering or rule
 3. Request an architecture change: a `.adl-change` whose `base` pins this package's state —
 
 ```
-base package avlon.borrowbox version "cycle-1" state "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f"
+base package avlon.borrowbox version "cycle-1" state "sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7"
 ```
 
 4. When the change is accepted, the next package is built from the applied state (`node tools/development-package.mjs build … ` with `semantic.change`), and `node tools/development-package.mjs check <package> --change <file>` proves `package.changeState == change.base.state` before any work continues.

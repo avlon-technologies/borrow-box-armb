@@ -1,0 +1,37 @@
+{
+  "incremental-change-package": "continuum-incremental-change-package/2",
+  "package": "avlon.borrowbox",
+  "reason": "REASON.md",
+  "base": {
+    "package": "avlon.borrowbox",
+    "version": "cycle-1",
+    "changeState": "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f",
+    "attestation": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42",
+    "sequence": 1
+  },
+  "delta": {
+    "semantic": "changed",
+    "bindings": "changed",
+    "acceptance": "changed"
+  },
+  "semantic": {
+    "change": "changes/lending-circles.adl-change"
+  },
+  "bindings": {
+    "documents": [
+      "bindings/local-development.adl-binding.json"
+    ]
+  },
+  "acceptance": {
+    "added": [
+      "acceptance/scenarios/circle-only-request-needs-membership.scenario.json",
+      "acceptance/scenarios/removal-keeps-commitments.scenario.json"
+    ],
+    "changed": [],
+    "removed": [],
+    "adapter": "acceptance/adapter.mjs"
+  },
+  "expected": {
+    "sequence": 2
+  }
+}

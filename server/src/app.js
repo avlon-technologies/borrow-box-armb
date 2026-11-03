@@ -10,6 +10,7 @@ import { Refusal, unauthenticated, notFound, invalid } from './errors.js';
 import { getPerson, listPeople } from './people.js';
 import * as catalog from './catalog.js';
 import * as borrowing from './borrowing.js';
+import * as circles from './circles.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const COOKIE = 'bb_session';
@@ -126,6 +127,25 @@ export function createApp(options = {}) {
   api.post('/items', write((req, v) => ({ created: true, item: catalog.listItem(ctx, v, req.body) })));
   api.patch('/items/:id', write((req, v) => ({ item: catalog.editItem(ctx, v, req.params.id, req.body) })));
   api.post('/items/:id/visibility', write((req, v) => ({ item: catalog.setItemVisibility(ctx, v, req.params.id, req.body?.hidden) })));
+
+  api.put('/items/:id/audience', write((req, v) => ({ item: catalog.setItemAudience(ctx, v, req.params.id, req.body) })));
+
+  // Lending circles
+  const circle = (v, id) => ({ circle: circles.getCircle(ctx, v, id) });
+  api.get('/circles', read((_req, v) => circles.listCircles(ctx, v)));
+  api.get('/circles/:id', read((req, v) => circles.getCircle(ctx, v, req.params.id)));
+  api.post('/circles', write((req, v) => ({ created: true, ...circle(v, circles.createCircle(ctx, v, req.body)) })));
+  api.post('/circles/:id/invitations', write((req, v) => circle(v, circles.inviteToCircle(ctx, v, req.params.id, req.body))));
+  api.post('/circles/:id/accept', write((req, v) => circle(v, circles.acceptInvitation(ctx, v, req.params.id))));
+  api.post('/circles/:id/decline', write((req, v) => {
+    circles.declineInvitation(ctx, v, req.params.id);
+    return { circle: null };
+  }));
+  api.post('/circles/:id/leave', write((req, v) => {
+    circles.leaveCircle(ctx, v, req.params.id);
+    return { circle: null };
+  }));
+  api.post('/circles/:id/members/:personId/remove', write((req, v) => circle(v, circles.removeMember(ctx, v, req.params.id, req.params.personId))));
 
   // Borrowing
   const show = (v, id) => ({ reservation: borrowing.getReservation(ctx, v, id) });

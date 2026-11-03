@@ -1,0 +1,49 @@
+{
+  "development-package-trace": "1",
+  "normative": false,
+  "note": "derived from the compiler's process graph; declared causality only — never a runtime claim",
+  "scenario": "removal-keeps-commitments",
+  "from": "::BorrowBox.Lending.Library.RemoveMember",
+  "ok": true,
+  "hops": [
+    {
+      "consumed": "::BorrowBox.Lending.Library.RemoveMember",
+      "participant": "::BorrowBox.Lending.Library.CircleService",
+      "consequence": "::BorrowBox.Lending.Library.MemberRemoved",
+      "receiveKind": "handles",
+      "strength": "correlated",
+      "provenance": "authored-reaction",
+      "exclusivity": "all-of",
+      "boundary": null,
+      "crossings": 0
+    }
+  ],
+  "sinks": [
+    {
+      "participant": "::BorrowBox.Lending.Library.CircleService",
+      "consumed": "::BorrowBox.Lending.Library.MemberRemoved"
+    }
+  ],
+  "openConsumptions": [],
+  "productions": [
+    {
+      "message": "::BorrowBox.Lending.Library.MemberRemoved",
+      "producer": "::BorrowBox.Lending.Library.CircleService",
+      "readModel": "::BorrowBox.Lending.Library.CircleActivity"
+    }
+  ],
+  "cycles": [],
+  "messagesReached": [
+    "::BorrowBox.Lending.Library.MemberRemoved",
+    "::BorrowBox.Lending.Library.RemoveMember"
+  ],
+  "participantsReached": [
+    "::BorrowBox.Lending.Library.CircleService"
+  ],
+  "weakestStrength": "correlated",
+  "declaredCausalClosure": {
+    "closed": true,
+    "meaning": "every consumption reached along declared hops carries a declaration (sinks included); NOT runtime completion, success, or that any Event occurs"
+  },
+  "expected": null
+}

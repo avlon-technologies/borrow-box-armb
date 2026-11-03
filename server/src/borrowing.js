@@ -8,6 +8,7 @@ import { addDays, daysInclusive, isIsoDate } from './dates.js';
 import { conflict, forbidden, invalid, notFound } from './errors.js';
 import { personView } from './people.js';
 import { photoUrl, savePhotos } from './photos.js';
+import { canReach } from './catalog.js';
 
 const committedSql = COMMITTED.map((s) => `'${s}'`).join(', ');
 const RATINGS = ['like-new', 'good', 'worn', 'damaged'];
@@ -113,6 +114,8 @@ export function requestToBorrow(ctx, viewer, itemId, input = {}) {
   if (!item) throw notFound('That item');
   if (item.owner_id === viewer.id) throw forbidden("This is your own item — you can't borrow it from yourself.");
   if (item.hidden) throw conflict('item_hidden', "This item isn't taking new requests right now.");
+  // ItemReach evidence: a circle-only item needs a circle shared with the owner, right now.
+  if (!canReach(db, item, viewer.id)) throw forbidden('This item is shared only within circles you are not part of.');
 
   const { startDate, endDate } = input;
   if (!isIsoDate(startDate) || !isIsoDate(endDate)) throw invalid('Please choose a start and a return date.', { field: 'dates' });
@@ -144,6 +147,7 @@ export function requestToBorrow(ctx, viewer, itemId, input = {}) {
     ).run(id, item.id, viewer.id, startDate, endDate, endDate, text, now, now);
   } catch (err) {
     if (isConstraint(err, 'self_borrow')) throw forbidden("This is your own item — you can't borrow it from yourself.");
+    if (isConstraint(err, 'circle_only')) throw forbidden('This item is shared only within circles you are not part of.');
     throw err;
   }
   journal(ctx, 'RequestSubmitted', viewer.id, { reservationId: id, itemId: item.id, data: { startDate, endDate, note: text } });
@@ -329,7 +333,10 @@ function summarize(ctx, r, viewer, people) {
   const overdue = r.status === 'borrowed' && r.end_date < today;
   const owner = people(r.owner_id);
   const borrower = people(r.borrower_id);
-  const item = ctx.db.prepare('SELECT id, title, photo, category, hidden, pickup_area, lending_rules FROM items WHERE id = ?').get(r.item_id);
+  const item = ctx.db.prepare('SELECT id, owner_id, title, photo, category, hidden, audience, pickup_area, lending_rules FROM items WHERE id = ?').get(r.item_id);
+  // For the owner: the request was made through a circle the borrower has since left. It still
+  // stands (MembershipChangesKeepCommitments); the owner just deserves to know.
+  const outsideCircles = role === 'owner' && item.audience === 'circles' && !canReach(ctx.db, item, r.borrower_id);
   // For the owner: does approving this collide with anything already committed?
   let blockedBy = null;
   if (r.status === 'pending') {
@@ -353,7 +360,8 @@ function summarize(ctx, r, viewer, people) {
     startsInDays: daysInclusive(today, r.start_date) - 1,
     dueInDays: daysInclusive(today, r.end_date) - 1,
     blockedBy,
-    item: { id: item.id, title: item.title, photoUrl: photoUrl(item.photo), category: item.category, hidden: !!item.hidden, pickupArea: item.pickup_area, lendingRules: item.lending_rules },
+    item: { id: item.id, title: item.title, photoUrl: photoUrl(item.photo), category: item.category, hidden: !!item.hidden, audience: item.audience, pickupArea: item.pickup_area, lendingRules: item.lending_rules },
+    borrowerOutsideCircles: outsideCircles,
     owner,
     borrower,
     pendingExtension: pendingExtension ? { id: pendingExtension.id, proposedEndDate: pendingExtension.proposed_end_date, note: pendingExtension.note, createdAt: pendingExtension.created_at } : null,

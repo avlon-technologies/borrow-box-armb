@@ -2,11 +2,35 @@
 // Handles ListItem, EditItem, SetItemVisibility; answers SearchCatalog with availability.
 // Every function that changes state runs inside the caller's transaction.
 import { randomUUID } from 'node:crypto';
-import { COMMITTED } from './db.js';
+import { COMMITTED, circleReachSql } from './db.js';
 import { isIsoDate } from './dates.js';
 import { forbidden, invalid, notFound } from './errors.js';
 import { personView } from './people.js';
 import { photoUrl, savePhoto } from './photos.js';
+import { activeCircleIds, recordCircleEvent } from './circles.js';
+
+export const AUDIENCES = ['everyone', 'circles'];
+
+/** Circles an item is shared with that the viewer may know about: all of them for its owner,
+ * otherwise only circles where the viewer and the owner are both active members. */
+function sharedCircles(db, itemId, ownerId, viewerId) {
+  const rows = db.prepare(
+    `SELECT c.id, c.name FROM item_circles ic JOIN circles c ON c.id = ic.circle_id
+     WHERE ic.item_id = ? ORDER BY c.name`,
+  ).all(itemId);
+  if (viewerId === ownerId) return rows;
+  const mine = new Set(activeCircleIds(db, viewerId));
+  const owners = new Set(activeCircleIds(db, ownerId));
+  return rows.filter((c) => mine.has(c.id) && owners.has(c.id));
+}
+
+/** Can the viewer make a new request for this item, audience-wise? (CircleOnlyNeedsSharedCircle) */
+export function canReach(db, item, viewerId) {
+  if (item.owner_id === viewerId) return false;
+  if (item.audience !== 'circles') return true;
+  return !!db.prepare(`SELECT ${circleReachSql(':item', ':requester', ':owner')} AS ok`)
+    .get({ item: item.id, requester: viewerId, owner: item.owner_id }).ok;
+}
 
 export const CATEGORIES = ['Outdoors', 'Tools', 'Kitchen', 'Music', 'Tech & Photo', 'Games', 'Books', 'Bikes & Sport', 'Home & Garden', 'Other'];
 const committedSql = COMMITTED.map((s) => `'${s}'`).join(', ');
@@ -85,6 +109,9 @@ export function itemView(db, row, viewer, today, { detail = false } = {}) {
     pickupArea: row.pickup_area,
     photoUrl: photoUrl(row.photo),
     hidden: !!row.hidden,
+    audience: row.audience,
+    circles: sharedCircles(db, row.id, row.owner_id, viewer.id),
+    canRequest: !row.hidden && canReach(db, row, viewer.id),
     owner,
     isMine: row.owner_id === viewer.id,
     availableToday: !bookedToday && !out,
@@ -101,10 +128,11 @@ export function itemView(db, row, viewer, today, { detail = false } = {}) {
     ).all(row.id, viewer.id).map((r) => ({ id: r.id, start: r.start_date, end: r.end_date, status: r.status }));
     if (view.isMine) {
       view.openRequests = db.prepare(
-        `SELECT r.id, r.start_date, r.end_date, r.status, r.note, p.name AS borrower_name, p.color AS borrower_color
+        `SELECT r.id, r.borrower_id, r.start_date, r.end_date, r.status, r.note, p.name AS borrower_name, p.color AS borrower_color
          FROM reservations r JOIN people p ON p.id = r.borrower_id
          WHERE r.item_id = ? AND r.status IN ('pending', ${committedSql}) ORDER BY r.start_date`,
-      ).all(row.id).map((r) => ({ id: r.id, start: r.start_date, end: r.end_date, status: r.status, note: r.note, borrowerName: r.borrower_name, borrowerColor: r.borrower_color }));
+      ).all(row.id).map((r) => ({ id: r.id, start: r.start_date, end: r.end_date, status: r.status, note: r.note, borrowerName: r.borrower_name, borrowerColor: r.borrower_color,
+        outsideCircles: row.audience === 'circles' && !canReach(db, row, r.borrower_id) }));
     }
   }
   return view;
@@ -119,8 +147,25 @@ export function searchCatalog(ctx, viewer, query = {}) {
     where.push('i.owner_id = ?');
     params.push(viewer.id);
   } else {
-    // Hidden items no longer appear to others; owners still see their own.
-    where.push('(i.hidden = 0 OR i.owner_id = ?)');
+    // Hidden items no longer appear to others; owners still see their own. Circle-only items
+    // appear only to people who share one of the item's circles with its owner.
+    where.push(`(i.owner_id = ? OR (i.hidden = 0 AND (i.audience = 'everyone' OR ${circleReachSql('i.id', '?', 'i.owner_id')})))`);
+    params.push(viewer.id, viewer.id);
+  }
+  if (query.circle) {
+    // Items shared with one circle the viewer is active in (whose owner is still active there).
+    where.push(`EXISTS (SELECT 1 FROM item_circles ic
+      JOIN memberships mv ON mv.circle_id = ic.circle_id AND mv.person_id = ? AND mv.standing = 'active'
+      JOIN memberships mo ON mo.circle_id = ic.circle_id AND mo.person_id = i.owner_id AND mo.standing = 'active'
+      WHERE ic.item_id = i.id AND ic.circle_id = ?)`);
+    params.push(viewer.id, query.circle);
+  }
+  if (query.circles === '1') {
+    // Items reachable through any of the viewer's circles, their own shared ones included.
+    where.push(`EXISTS (SELECT 1 FROM item_circles ic
+      JOIN memberships mv ON mv.circle_id = ic.circle_id AND mv.person_id = ? AND mv.standing = 'active'
+      JOIN memberships mo ON mo.circle_id = ic.circle_id AND mo.person_id = i.owner_id AND mo.standing = 'active'
+      WHERE ic.item_id = i.id)`);
     params.push(viewer.id);
   }
   if (query.owner) {
@@ -154,12 +199,62 @@ export function getItem(ctx, viewer, itemId) {
   const { db } = ctx;
   const row = db.prepare('SELECT * FROM items WHERE id = ? OR slug = ?').get(itemId, itemId);
   if (!row) throw notFound('That item');
-  if (row.hidden && row.owner_id !== viewer.id) {
-    // A hidden item stays visible to people who already have a reservation for it.
+  if (row.owner_id !== viewer.id && (row.hidden || !canReach(db, row, viewer.id))) {
+    // A hidden or circle-only item stays visible to people who already have a reservation for
+    // it (HiddenItemsKeepCommitments, MembershipChangesKeepCommitments).
     const involved = db.prepare('SELECT 1 FROM reservations WHERE item_id = ? AND borrower_id = ? LIMIT 1').get(row.id, viewer.id);
     if (!involved) throw notFound('That item');
   }
-  return itemView(db, row, viewer, ctx.today(), { detail: true });
+  const view = itemView(db, row, viewer, ctx.today(), { detail: true });
+  if (view.isMine) view.myCircles = db.prepare(
+    `SELECT c.id, c.name FROM memberships m JOIN circles c ON c.id = m.circle_id
+     WHERE m.person_id = ? AND m.standing = 'active' ORDER BY c.name`,
+  ).all(viewer.id);
+  return view;
+}
+
+function validateAudience(db, viewer, input) {
+  const audience = input.audience ?? 'everyone';
+  if (!AUDIENCES.includes(audience)) throw invalid('Choose who can borrow it: everyone, or just your circles.', { field: 'audience' });
+  const ids = input.circleIds ?? [];
+  if (!Array.isArray(ids) || ids.some((x) => typeof x !== 'string')) throw invalid('Choose circles from your list.', { field: 'circleIds' });
+  const unique = [...new Set(ids)];
+  const mine = new Set(activeCircleIds(db, viewer.id));
+  // ShareOnlyWhereMember: only circles the owner is an active member of.
+  if (unique.some((id) => !mine.has(id))) throw forbidden('You can only share with circles you belong to.');
+  if (audience === 'circles' && unique.length === 0) throw invalid('Pick at least one circle to share it with.', { field: 'circleIds' });
+  return { audience, circleIds: unique };
+}
+
+/** Writes the item's audience and circle shares, and tells each affected circle (ItemAudienceChanged). */
+function writeAudience(ctx, viewer, itemId, { audience, circleIds }) {
+  const { db } = ctx;
+  const now = ctx.now().toISOString();
+  const before = db.prepare('SELECT circle_id FROM item_circles WHERE item_id = ?').all(itemId).map((r) => r.circle_id);
+  db.prepare('UPDATE items SET audience = ?, updated_at = ? WHERE id = ?').run(audience, now, itemId);
+  const add = circleIds.filter((id) => !before.includes(id));
+  // Shares in circles the owner no longer belongs to are kept unless the owner removes them
+  // explicitly here; they grant nothing while the owner is not an active member.
+  const keepForeign = before.filter((id) => !activeCircleIds(db, viewer.id).includes(id));
+  const drop = before.filter((id) => !circleIds.includes(id) && !keepForeign.includes(id));
+  const ins = db.prepare('INSERT INTO item_circles (item_id, circle_id, created_at) VALUES (?, ?, ?)');
+  for (const id of add) ins.run(itemId, id, now);
+  const del = db.prepare('DELETE FROM item_circles WHERE item_id = ? AND circle_id = ?');
+  for (const id of drop) del.run(itemId, id);
+  // ItemAudienceChanged is consumed by CircleService, which records it in each circle's activity.
+  for (const id of add) recordCircleEvent(ctx, id, 'ItemAudienceChanged', viewer.id, { itemId, data: { audience, change: 'shared' } });
+  for (const id of drop) recordCircleEvent(ctx, id, 'ItemAudienceChanged', viewer.id, { itemId, data: { audience, change: 'unshared' } });
+}
+
+// SetItemAudience — admits Owner, requires ItemOwnership for itemId. Narrowing the audience
+// never touches reservations already made (MembershipChangesKeepCommitments).
+export function setItemAudience(ctx, viewer, itemId, input = {}) {
+  const { db } = ctx;
+  const row = db.prepare('SELECT id, owner_id FROM items WHERE id = ? OR slug = ?').get(itemId, itemId);
+  if (!row) throw notFound('That item');
+  if (row.owner_id !== viewer.id) throw forbidden('Only the owner can choose who it is shared with.');
+  writeAudience(ctx, viewer, row.id, validateAudience(db, viewer, input));
+  return getItem(ctx, viewer, row.id);
 }
 
 // ListItem — admits Owner (any member listing their own possession).
@@ -167,6 +262,7 @@ export function listItem(ctx, viewer, input) {
   const { db } = ctx;
   const fields = validateItem(input || {});
   if (!input.photo) throw invalid('A photo helps friends recognise it. Please add one.', { field: 'photo' });
+  const audience = validateAudience(db, viewer, input);
   const photo = savePhoto(ctx.uploadsDir, input.photo);
   const id = randomUUID();
   const now = ctx.now().toISOString();
@@ -174,6 +270,8 @@ export function listItem(ctx, viewer, input) {
     `INSERT INTO items (id, owner_id, title, category, description, lending_rules, max_loan_days, pickup_area, photo, hidden, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
   ).run(id, viewer.id, fields.title, fields.category, fields.description, fields.lending_rules, fields.max_loan_days ?? 7, fields.pickup_area, photo, now, now);
+  // A new listing is offered to everyone unless the owner chose circles (ListItem, then SetItemAudience).
+  if (audience.audience !== 'everyone' || audience.circleIds.length) writeAudience(ctx, viewer, id, audience);
   return getItem(ctx, viewer, id);
 }
 

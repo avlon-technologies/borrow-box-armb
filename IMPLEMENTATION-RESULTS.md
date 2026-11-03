@@ -6,6 +6,105 @@ polished responsive interface, and three automated suites that were run with the
 
 Run date 2026-11-02 (America/Toronto). Setup and use: [README.md](README.md).
 
+The V1 record follows the lending-circles change, which comes first because it is the most recent.
+
+---
+
+## Change 2: lending circles (2026-11-03)
+
+**Status: built, tested and documented. The Continuum lifecycle is incomplete because of a Host
+defect (see below).** Friends can start a circle, invite people, accept or decline, leave, and the
+organiser can remove members. Owners choose for each item whether *everyone* or *only the circles they
+pick* can borrow it. Removing a member stops their new circle-only requests and keeps every earlier
+commitment.
+
+### Rules as built
+
+| Rule | How it is enforced |
+|---|---|
+| A circle-only item can be seen and requested only by someone who shares an active circle with the owner | `canReach` in `server/src/catalog.js` on browse, detail and request; plus the SQLite trigger `reservations_circle_reach` on every insert, inside the request transaction |
+| Membership changes never invalidate reservations | Reach is checked only when a request is **created**. Approve, ready, pickup, return and extensions never recheck it, and the trigger fires on INSERT only |
+| Removing a member preserves prior commitments | Approved and borrowed loans carry on (including extensions and the return). Pending requests also stay and remain the owner's decision; the owner sees a note that the borrower is no longer in the circle |
+| Only active members invite; only the organiser removes; the organiser cannot leave or be removed | Server checks in `server/src/circles.js` (403/409), plus trigger `memberships_organiser_stays` |
+| Membership history is never erased | Membership rows change standing (invited, active, declined, left, removed) and are never deleted (trigger); the `circle_events` journal is append-only (triggers) and shown as the circle's activity |
+| Items can be shared only into circles the owner is active in | `validateAudience` (403), and narrowing an item to circles never touches its existing reservations |
+
+### Verification evidence (run, not assumed, after the last code change)
+
+| Suite | Command | Result |
+|---|---|---|
+| API, rules, authorization, concurrency, persistence | `npm test` | **64 / 64 passed** (9 files; 16 new circle tests in `circles.test.js` and `circle-access.test.js`) |
+| Browser journeys (Chromium desktop + Pixel 7 mobile) | `npm run test:e2e` | **12 / 12 passed** (3 new in `e2e/circles.spec.js`) |
+| Continuum acceptance scenarios | `continuum package run continuum` | **8 passed, 0 failed, 8 executed** (2 new), in `continuum/evidence/acceptance-run.txt` |
+| Package integrity | `continuum package check continuum` | intact, in `continuum/evidence/package-check.txt` |
+| ADL state B | Continuum compiler | **0 errors, 0 warnings** |
+| BDL `2026-11-03.1` | Continuum BDL compiler | **valid, 0 errors, 8 warnings** (3 forbidden actions with no declared performer, 5 effective-performer-set notes), in `continuum/evidence/bdl-compile.txt` |
+| Database migration | old `data/borrowbox.sqlite` opened by the new server (on a copy) | `audience` column added, all 10 items `everyone`, all 8 reservations kept, trigger present |
+| Architecture guard | `continuum guard ci` | **FAIL**: `lifecycle/guard/state-unrecorded` (the live package is not checkpoint 0001). Expected until the transition is adopted |
+| Conformance | `continuum conformance assess continuum` | L1 *Undetermined*, `model/language-version-unsupported` (unchanged from V1). No level is claimed |
+
+Existing V1 tests were kept unchanged in intent and all still pass; the seed adds two circles
+(Riverside Neighbours, Supper Club), and the V1 items stay open to everyone except Sam's bike.
+
+### Acceptance mapping (circles)
+
+| Requirement | Evidence |
+|---|---|
+| Create a circle, invite members | `circles.test.js` (8 tests); e2e *start a circle, invite a friend, and lend an item just to that circle* |
+| Contribute items, choose everybody or circle members only | `circle-access.test.js` (*a circle-only item is seen and requested only through a shared circle*, *only the owner chooses the audience*); the same e2e journey; audience picker on the item form and item page |
+| Membership changes do not invalidate existing reservations | `circle-access.test.js` (*removal refuses new circle-only requests, but a committed loan runs to the end*, *a pending request survives removal*, *when the owner leaves…*, *narrowing the audience…*); scenario `removal-keeps-commitments` |
+| Removal prevents new circle-only requests | `circle-access.test.js` (*removal racing a request*, *the database refuses a circle-only request…*); e2e *joining a circle reveals its circle-only items…*; scenarios `circle-only-request-needs-membership`, `removal-keeps-commitments` |
+| Friendly experience preserved | e2e desktop and @mobile journeys; new screens use the existing components, tone and layout |
+
+### Continuum work for this change
+
+- **Classified as both BDL and ADL**, proposed before any code and approved by the owner
+  ("Approve, write B directly"), recorded in `transitions/0002-lending-circles/APPROVAL.md`.
+- **BDL** `continuum/business.bdl` → definition `2026-11-03.1`: Circle and Membership lifecycles, the
+  rules that reach is checked only at request time and that removal keeps commitments, and
+  `unspecified OrganiserSuccession`.
+- **ADL** state B: `changeState sha256:2a970ccbcbf7166fcfbbd5a243cad584c7b1a07b646beba57defa39643be61a7`,
+  attestation `sha256:f81cd224fe95bf70327e0e4540de10aade4d9428a4ff5f40ad37a549619dc4df`. Adds the Member
+  actor, the LendingCircles capability (4 requirements), 7 commands, 7 events, CircleStore, CircleActivity,
+  5 business rules, CircleService and 2 tests; RequestToBorrow now requires ItemReach evidence.
+- **Transition** `transitions/0002-lending-circles/`: the `.adl-change`, the BDL candidate and canonical
+  diff, the bindings and the 2 scenarios.
+- **Host defect.** Every `apply` against this model is refused: the applied result gives both `Policy`
+  elements an `attributes` member (`adl/structural/unknown-member` → `change/result/invalid-state`), even
+  for a one-line probe. So `diff` is unverified, `icp check` refuses at apply (base and identity pass),
+  and `icp ready` stays at *identify*. The mechanical proof `apply(A, Δ) = B` is **not** established,
+  and ledger checkpoint 0002 is not recorded. Evidence: `continuum/evidence/transition-0002-check.txt`.
+- **How it shaped the code**: the model placed circles in the Library context so membership is checked
+  atomically with the request; the compiler's multi-writer finding moved circle history into one store;
+  the BDL warnings led to an outcome on invitations and a population-scoped invariant.
+
+### Gaps (this change)
+
+1. `apply(A, Δ) = B` not proved and checkpoint 0002 not recorded (Host defect above); guard fails until then.
+2. No organiser succession: the organiser cannot leave or hand over (BDL `unspecified OrganiserSuccession`).
+3. An invitation cannot be withdrawn by the inviter; it can only be declined or re-sent.
+4. No notifications outside the app; the Circles tab badge counts invitations.
+5. Circles cannot be renamed or deleted.
+
+### Assumptions (this change)
+
+- "Existing reservations" includes pending requests: they survive removal and the owner still decides.
+- Reach needs the requester **and** the owner to be active in a shared circle; an owner who leaves a
+  circle stops reaching it for new requests too.
+- An item open to everyone can still be shown on chosen circles' shelves.
+- Declined, left and removed people can be invited again.
+
+### Time and intervention
+
+- **Wall clock**: about 22:07 EST 2026-11-02 to about 05:00 EST 2026-11-03 (about 7 h), including one
+  context compaction and the wait for approval.
+- **Human intervention**: one "continue" after a stall, and one answer to the approval question.
+- **Cost**: not visible to the agent; see `/cost` for this session.
+
+---
+
+# V1 record (2026-11-02)
+
 ## Verification evidence (run, not assumed)
 
 | Suite | Command | Result |
@@ -83,7 +182,7 @@ commits that followed changed no code.
 - A condition rating is required at pickup, return and return confirmation.
 - Dates are inclusive calendar days in one community time zone (`BORROWBOX_TZ`, default
   America/Toronto).
-- Lending circles and any later feature were not built (out of V1 scope).
+- Lending circles were out of V1 scope; they were added as change 2 (above).
 
 ## Cost, time, intervention
 
