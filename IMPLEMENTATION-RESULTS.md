@@ -40,7 +40,7 @@ commitment.
 | ADL state B | Continuum compiler | **0 errors, 0 warnings** |
 | BDL `2026-11-03.1` | Continuum BDL compiler | **valid, 0 errors, 8 warnings** (3 forbidden actions with no declared performer, 5 effective-performer-set notes), in `continuum/evidence/bdl-compile.txt` |
 | Database migration | old `data/borrowbox.sqlite` opened by the new server (on a copy) | `audience` column added, all 10 items `everyone`, all 8 reservations kept, trigger present |
-| Architecture guard | `continuum guard ci` | **FAIL**: `lifecycle/guard/state-unrecorded` (the live package is not checkpoint 0001). Expected until the transition is adopted |
+| Architecture guard | `continuum guard ci` at 16346d8 | **PASS** with warning `lifecycle/guard/state-unrecorded`: architecture *drift* (the live package sha256:2a970ccb… is not checkpoint 0001; moved semantic, bindings, acceptance), implementation *moved-conforming*, lifecycle and hygiene ok. Before the commit it failed only because the tree was dirty |
 | Conformance | `continuum conformance assess continuum` | L1 *Undetermined*, `model/language-version-unsupported` (unchanged from V1). No level is claimed |
 
 Existing V1 tests were kept unchanged in intent and all still pass; the seed adds two circles
@@ -80,7 +80,7 @@ Existing V1 tests were kept unchanged in intent and all still pass; the seed add
 
 ### Gaps (this change)
 
-1. `apply(A, Δ) = B` not proved and checkpoint 0002 not recorded (Host defect above); guard fails until then.
+1. `apply(A, Δ) = B` not proved and checkpoint 0002 not recorded (Host defect above); the guard warns `state-unrecorded` until then.
 2. No organiser succession: the organiser cannot leave or hand over (BDL `unspecified OrganiserSuccession`).
 3. An invitation cannot be withdrawn by the inviter; it can only be declined or re-sent.
 4. No notifications outside the app; the Circles tab badge counts invitations.
