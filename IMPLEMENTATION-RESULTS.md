@@ -88,8 +88,8 @@ commits that followed changed no code.
 
 ## Cost, time, intervention
 
-- **Wall-clock time**: about 2 h 50 min of agent work (bootstrap commit 18:46 to final commit about 21:40 EST,
-  2026-11-02), including one context compaction.
+- **Wall-clock time**: about 2 h 10 min of agent work (first prompt 19:28 EST to final commit about 21:38 EST,
+  2026-11-02), including one context compaction. The Continuum modelling and packaging itself took about 15 min, and the acceptance adapter and run about 10 min.
 - **Human intervention**: none beyond the initial assignment and two "continue" prompts. No questions were asked.
 - **Cost**: token and dollar usage are not visible to the agent. Read them from the Claude Code session
   usage (`/cost`) for this session.
