@@ -61,8 +61,7 @@ commits that followed changed no code.
    `model/language-version-unsupported`, because the assessor does not support `adl/1.7`. I kept `adl/1.7`
    because its command admissions carry the authorization semantics. This is a tool capability limit. No
    level (L1 to L4) is claimed, and the green tests are reported as test results only.
-2. **The package is not accepted.** `continuum package accept continuum --as <you> --verified-against HEAD`
-   is a human judgment, left to the project owner. No ledger checkpoint exists.
+2. **Package acceptance (resolved).** The initial state was accepted by the project owner (mike@avlon.ca) on 2026-11-03T02:44:50Z, verified against commit 0992b49 with the suite re-run (6/6). Acceptance fact sha256:38f7355e9703a0b900599bc6390cf86db232be51083abd2804a1725a9328a07c, appended to continuum/workflow.jsonl. Ledger checkpoint 0001 (initial) recorded in continuum/ledger.json and continuum/history/0001-initial.
 3. **No real authentication.** Sign-in is a demo identity switcher with no passwords, though
    authorization is enforced on the server.
 4. **No out-of-app notifications** (email or push). The Loans badge and the *Needs you* list stand in.

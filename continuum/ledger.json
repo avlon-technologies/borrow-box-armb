@@ -1,0 +1,34 @@
+{
+  "continuum-ledger": "continuum-ledger/1",
+  "package": "avlon.borrowbox",
+  "current": 1,
+  "entries": [
+    {
+      "sequence": 1,
+      "label": "initial",
+      "recorded": "history/0001-initial",
+      "package": "avlon.borrowbox",
+      "version": "cycle-1",
+      "core": "adl/1.7",
+      "changeState": "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f",
+      "attestation": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42",
+      "environment": "LocalDevelopment",
+      "bindingDigests": {
+        "LocalDevelopment": "sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d"
+      },
+      "acceptance": {
+        "count": 6,
+        "executed": false,
+        "accepted": {
+          "fact": "sha256:38f7355e9703a0b900599bc6390cf86db232be51083abd2804a1725a9328a07c",
+          "implementationRevision": "0992b49468275a70e8530855bd9fca33aa7f3a52"
+        }
+      },
+      "transition": null,
+      "previous": null,
+      "verifiedAgainst": {
+        "commit": "0992b49468275a70e8530855bd9fca33aa7f3a52"
+      }
+    }
+  ]
+}

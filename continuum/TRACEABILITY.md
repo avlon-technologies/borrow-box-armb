@@ -39,5 +39,4 @@ naming the model test it realizes, and each acceptance scenario's `test` field p
 
 ## Lifecycle state
 
-The initial state is **not accepted**. `continuum package accept continuum --as <you> --verified-against HEAD`
-is a human judgment and is left to the project owner. No ledger checkpoint is recorded.
+The initial state (changeState sha256:8ae3819b…) was **accepted** by the project owner (mike@avlon.ca) on 2026-11-03T02:44:50Z, verified against commit 0992b49 with the suite re-run (6/6). Acceptance fact sha256:38f7355e9703a0b900599bc6390cf86db232be51083abd2804a1725a9328a07c, appended to continuum/workflow.jsonl. Ledger checkpoint 0001 (initial) recorded in continuum/ledger.json and continuum/history/0001-initial.

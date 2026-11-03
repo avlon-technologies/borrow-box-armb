@@ -1,0 +1,59 @@
+{
+  "adl-json": "adl-json/1.0",
+  "vocabulary-claims": {
+    "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+    "version": "cycle-1",
+    "technologies": {
+      "node-process": {
+        "claims": [],
+        "configuration": {
+          "runtime": "atom",
+          "entry": "atom"
+        }
+      },
+      "in-process-module": {
+        "claims": [],
+        "configuration": {
+          "module": "atom"
+        }
+      },
+      "sqlite-journal": {
+        "claims": [
+          "DeliveryExpectation.ordering/ordered",
+          "DeliveryExpectation.delivery/at-least-once",
+          "DeliveryExpectation.durability/durable"
+        ],
+        "configuration": {
+          "journal": "atom",
+          "type": "atom"
+        }
+      },
+      "sqlite-file": {
+        "claims": [
+          "PersistenceExpectation.durability/durable",
+          "PersistenceExpectation.consistency/strong",
+          "retention-honored",
+          "erasure-capable",
+          "access-controlled",
+          "auditable"
+        ],
+        "configuration": {
+          "file": "atom",
+          "table": "atom"
+        }
+      },
+      "local-directory": {
+        "claims": [
+          "PersistenceExpectation.durability/durable",
+          "retention-honored",
+          "erasure-capable",
+          "access-controlled",
+          "auditable"
+        ],
+        "configuration": {
+          "directory": "atom"
+        }
+      }
+    }
+  }
+}

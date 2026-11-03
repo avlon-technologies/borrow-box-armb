@@ -1,0 +1,105 @@
+{
+  "acceptance-scenario": "1",
+  "name": "full-loan-journey",
+  "purpose": "Request, approve, ready, pickup, return with borrower evidence, owner confirms with a disagreement; history keeps both.",
+  "verifies": [
+    "::BorrowBox.Lending.LoanCustody.HandoffIsAttributed",
+    "::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved",
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "test": "::BorrowBox.HandoffAndEvidenceTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    },
+    {
+      "step": "request.submit",
+      "args": {
+        "as": "sam",
+        "item": "drill",
+        "from": "+0",
+        "to": "+2",
+        "ref": "l"
+      },
+      "text": "Sam requests Maya's drill from today"
+    }
+  ],
+  "when": [
+    {
+      "step": "request.act",
+      "args": {
+        "as": "maya",
+        "ref": "l",
+        "action": "approve"
+      },
+      "text": "Maya approves"
+    },
+    {
+      "step": "request.act",
+      "args": {
+        "as": "maya",
+        "ref": "l",
+        "action": "ready"
+      },
+      "text": "Maya marks it ready"
+    },
+    {
+      "step": "request.act",
+      "args": {
+        "as": "sam",
+        "ref": "l",
+        "action": "pickup",
+        "note": "Looks great"
+      },
+      "text": "Sam confirms pickup"
+    },
+    {
+      "step": "request.act",
+      "args": {
+        "as": "sam",
+        "ref": "l",
+        "action": "return",
+        "note": "Works fine"
+      },
+      "text": "Sam starts the return"
+    },
+    {
+      "step": "request.act",
+      "args": {
+        "as": "maya",
+        "ref": "l",
+        "action": "confirm-return",
+        "note": "Chuck is loose",
+        "disagrees": true
+      },
+      "text": "Maya confirms and disagrees"
+    }
+  ],
+  "then": [
+    {
+      "step": "loan.status",
+      "args": {
+        "ref": "l",
+        "status": "returned"
+      },
+      "text": "the loan is complete"
+    },
+    {
+      "step": "loan.evidenceFrom",
+      "args": {
+        "ref": "l",
+        "authors": [
+          "sam",
+          "maya"
+        ],
+        "disputed": true
+      },
+      "text": "both accounts remain and the disagreement is recorded"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.ConfirmReturn"
+  }
+}

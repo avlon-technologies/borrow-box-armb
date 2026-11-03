@@ -1,0 +1,129 @@
+{
+  "development-package": "continuum-development-package/1",
+  "name": "borrowbox",
+  "generator": {
+    "tool": "tools/development-package.mjs",
+    "version": "0.1.0"
+  },
+  "goal": "GOAL.md",
+  "semantic": {
+    "package": "avlon.borrowbox",
+    "version": "cycle-1",
+    "core": "adl/1.7",
+    "attestation": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42",
+    "changeState": "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f",
+    "manifest": "model/borrowbox.adl-manifest.json",
+    "documents": [
+      "model/borrowbox.adl"
+    ],
+    "textProjection": "model/borrowbox.adl.txt",
+    "proof": "model/compile-proof.json",
+    "warnings": 0,
+    "notEvaluated": 0
+  },
+  "change": null,
+  "environment": {
+    "name": "LocalDevelopment",
+    "id": "ad702350-32e2-4339-b1ac-eeb110b602ee",
+    "document": "model/local-development.adl-binding.json",
+    "bindingDigest": "sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d"
+  },
+  "environments": [
+    {
+      "name": "LocalDevelopment",
+      "id": "ad702350-32e2-4339-b1ac-eeb110b602ee",
+      "document": "model/local-development.adl-binding.json",
+      "bindingDigest": "sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d"
+    }
+  ],
+  "bindings": [
+    "model/local-development.adl-binding.json"
+  ],
+  "vocabularies": [
+    "model/avlon.borrowbox.bindings.localdevelopment.vocabulary-claims.json"
+  ],
+  "acceptance": {
+    "scenarios": "acceptance/scenarios",
+    "runner": "acceptance/run.mjs",
+    "fakeProvider": "acceptance/fake-model-provider.mjs",
+    "adapter": "acceptance/adapter.mjs",
+    "count": 6,
+    "names": [
+      "extension-recheck",
+      "full-loan-journey",
+      "hidden-item-keeps-reservations",
+      "overlapping-approval-refused",
+      "self-borrow-refused",
+      "state-survives-restart"
+    ],
+    "traces": [
+      "acceptance/traces/extension-recheck.trace.json",
+      "acceptance/traces/full-loan-journey.trace.json",
+      "acceptance/traces/hidden-item-keeps-reservations.trace.json",
+      "acceptance/traces/overlapping-approval-refused.trace.json",
+      "acceptance/traces/self-borrow-refused.trace.json",
+      "acceptance/traces/state-survives-restart.trace.json"
+    ],
+    "executed": false,
+    "results": null,
+    "uncoveredRequirements": [
+      "::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability",
+      "::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings",
+      "::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable",
+      "::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle"
+    ]
+  },
+  "implementation": "IMPLEMENTATION.md",
+  "behaviour": {
+    "document": "BEHAVIOUR.md",
+    "starts": 5,
+    "underspecified": 0
+  },
+  "readme": "README.md",
+  "controls": [],
+  "generated": [
+    "BEHAVIOUR.md",
+    "IMPLEMENTATION.md",
+    "README.md",
+    "acceptance/README.md",
+    "acceptance/fake-model-provider.mjs",
+    "acceptance/run.mjs",
+    "acceptance/traces/extension-recheck.trace.json",
+    "acceptance/traces/full-loan-journey.trace.json",
+    "acceptance/traces/hidden-item-keeps-reservations.trace.json",
+    "acceptance/traces/overlapping-approval-refused.trace.json",
+    "acceptance/traces/self-borrow-refused.trace.json",
+    "acceptance/traces/state-survives-restart.trace.json",
+    "model/borrowbox.adl.txt",
+    "model/compile-proof.json"
+  ],
+  "files": {
+    "BEHAVIOUR.md": "sha256:18d5687f7099e40f1b61449828ac74bc636771dde8ba53d746daa2e57b1282c1",
+    "GOAL.md": "sha256:894df4bc2c5cd2ea0d4d89171b441df43f211dc4b1b655d69763eec3082452a6",
+    "IMPLEMENTATION.md": "sha256:318d691c62bfb43d51767dc34388efa80bd336c0906755dd8ab11115b01bc546",
+    "README.md": "sha256:6e4be1dec5c911aa3a888484745a541390c632ddeb8944ed725c8963736f7aa2",
+    "acceptance/README.md": "sha256:dcbb5e58f2298ef4a9ec185f881812d8aab83080d88cdaa517be023c466564a6",
+    "acceptance/adapter.mjs": "sha256:9b66bea7b91c0b8e3801f4e9cf333cf202ee6bf6cecee0028d330581ac05d361",
+    "acceptance/fake-model-provider.mjs": "sha256:d2ec0ce524ca996865beef2c339c205deb9d7ad2610a1e7ff72a1b7732781b69",
+    "acceptance/run.mjs": "sha256:447dac8db77b8e1d93382e778b52ebd4fead29f0ef62b05e3a924717dea01370",
+    "acceptance/scenarios/extension-recheck.scenario.json": "sha256:0bc316faaf4224f9c3734c1fcc2e132ba067234aea203395fd837128ce09d458",
+    "acceptance/scenarios/full-loan-journey.scenario.json": "sha256:8031861d397f73f5a105379bec1758fcd5a211b4c49ea5a4b5f0c271cf48518a",
+    "acceptance/scenarios/hidden-item-keeps-reservations.scenario.json": "sha256:7f1a522a9a8e0417ccb3e8d1c7dd2f8699ecd9076a0560019926fb00d56dc45a",
+    "acceptance/scenarios/overlapping-approval-refused.scenario.json": "sha256:3e04cc6cdd2842ea648d5526b95a7a6126be3fad42f9316e09eb81b45f019c7f",
+    "acceptance/scenarios/self-borrow-refused.scenario.json": "sha256:f38d553c11f5ec65e6e49f467d7746734bb71260854ada3a61ab294dc532c34a",
+    "acceptance/scenarios/state-survives-restart.scenario.json": "sha256:9ee0ebd86e8c5f63a5c2df869aca64491cf3e860c07055089b491f9356204d6e",
+    "acceptance/traces/extension-recheck.trace.json": "sha256:7934fa155882ab7e19dd5bd792be174b80a8ca627fb20b3a695bb88c46fc386f",
+    "acceptance/traces/full-loan-journey.trace.json": "sha256:eecf7c611c03e53c13aee84ff994b6b7bf6329a568c4651e60d4b49c10e409c2",
+    "acceptance/traces/hidden-item-keeps-reservations.trace.json": "sha256:5dfd11ce28cdae81cfb2bff4eb29cded18818a663dbfffc167740f7f2879dff7",
+    "acceptance/traces/overlapping-approval-refused.trace.json": "sha256:bfc4823ac52b725b1ec6758b1e5cb358a44e6e21a3a0cba2dca4f9ca9071d7ab",
+    "acceptance/traces/self-borrow-refused.trace.json": "sha256:cf91053257d4f20fa72a1e2d303b045bc1198e7a96852fb949f75d9277e9dfd1",
+    "acceptance/traces/state-survives-restart.trace.json": "sha256:e48cc71f065750cff5414160925667b3aa01ddac793a7f0b9d4d12d9326358f7",
+    "development-package.json": "sha256:f2ffe7f3f8aa62e93252f7afd65332be0d8834bfe1427356da6304f35d3d63b4",
+    "model/avlon.borrowbox.bindings.localdevelopment.vocabulary-claims.json": "sha256:1cd9d4e5f99bd8775628b607265c3548e0bdadf38e9be9ba74bc7f76b68896b6",
+    "model/borrowbox.adl": "sha256:834bf5e42ee212d09e99ec4682cd2e5bd6a2a58d82f8f2b979bd4086a0c28a96",
+    "model/borrowbox.adl-manifest.json": "sha256:6736627da1877a552afb8dce4e5e59b3694f971e562e91ba597ca9510df73f69",
+    "model/borrowbox.adl.txt": "sha256:bfae70e85f880d058332002cd566f20dab54fa2b30c42ede05909c036774e5bf",
+    "model/compile-proof.json": "sha256:e21efb5f3e8ce6b85eb4671049214f33c70a97cea4ee8bf64ce4f98a81f7d2f0",
+    "model/local-development.adl-binding.json": "sha256:8f44ec5b8a7f3516d3df85067019ae392e883f0cbfd6e9ce937f6d00c17a38ce"
+  }
+}

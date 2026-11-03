@@ -1,0 +1,6 @@
+{
+  "development-package": "1",
+  "name": "borrowbox",
+  "environment": "LocalDevelopment",
+  "controls": []
+}

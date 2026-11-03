@@ -1,0 +1,73 @@
+{
+  "development-package-proof": "1",
+  "normative": false,
+  "note": "the compiler's result relayed by tools/development-package.mjs — diagnostics and the ledger have no ratified wire form; the attestation and changeState are the engines' own digests",
+  "package": {
+    "name": "avlon.borrowbox",
+    "version": "cycle-1",
+    "core": "adl/1.7",
+    "documents": [
+      "borrowbox.adl"
+    ]
+  },
+  "ok": true,
+  "attestation": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42",
+  "changeState": "sha256:8ae3819b488c8639ce39955a41a7303c6f8cd4f360c74f65849a61deb1055a5f",
+  "ledger": {
+    "passed": 78,
+    "failed": 0,
+    "notEvaluated": 0,
+    "byReason": {}
+  },
+  "notEvaluated": [],
+  "inputs": {
+    "manifest": {
+      "name": "avlon.borrowbox",
+      "version": "cycle-1",
+      "core": "adl/1.7",
+      "imports": [],
+      "extensions": [],
+      "digest": "sha256:6736627da1877a552afb8dce4e5e59b3694f971e562e91ba597ca9510df73f69"
+    },
+    "documents": [
+      {
+        "path": "borrowbox.adl",
+        "digest": "sha256:834bf5e42ee212d09e99ec4682cd2e5bd6a2a58d82f8f2b979bd4086a0c28a96",
+        "bytes": 25649
+      }
+    ],
+    "inputSet": "sha256:bd2931cee108e688aeca1edff726ba0dd0377df2e2ddef96360e5cb8091f0650",
+    "note": "digests over the AUTHORED input bytes, distinct from the attestation (the engine's digest over canonical content)."
+  },
+  "verifier": {
+    "recordedBeside": "compile-proof.verifier.json",
+    "note": "the verifier that decided this judgment is NOT in this proof: it is acquired by the client and recorded beside it (continuum-verifier-record/1). When that record is absent the judgment is UNIDENTIFIED — a historical record, not attributable, not replayable, never a current claim."
+  },
+  "warnings": [],
+  "errors": [],
+  "derivedFrom": null,
+  "binding": {
+    "environments": [
+      {
+        "name": "LocalDevelopment",
+        "id": "ad702350-32e2-4339-b1ac-eeb110b602ee",
+        "document": "model/local-development.adl-binding.json",
+        "completeness": "passed",
+        "bindingDigest": "sha256:38551e0b974ec000699b5b17904d06b35958b7ec80e3b568eaac7e70269adc1d",
+        "notEvaluated": []
+      }
+    ],
+    "claims": [
+      {
+        "vocabulary": "avlon.borrowbox.bindings.localdevelopment cycle-1",
+        "digest": "sha256:d738642ef3df42cfffb371f1d2acb7aa843255876f2364a6638d293a815bfeed"
+      }
+    ],
+    "secretMaterial": {
+      "status": "not-evaluated",
+      "reason": "unresolved-normative-dependency",
+      "detail": "R12-1"
+    },
+    "unboundEnvironments": []
+  }
+}
