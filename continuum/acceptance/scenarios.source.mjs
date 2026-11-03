@@ -83,10 +83,10 @@ const scenarios = [
     purpose: 'Hiding an item refuses new requests while an existing approved reservation stays approved.',
     verifies: [`${S}.ItemListing.HiddenItemsKeepCommitments`, `${S}.Library.CatalogService`],
     test: '::BorrowBox.CatalogAndListingTests',
-    given: [start, { step: 'loan.approved', args: { owner: 'maya', as: 'sam', item: 'kayak', from: '+4', to: '+5', ref: 'k' }, text: "Sam has Maya's kayak approved" }],
-    when: [{ step: 'item.hide', args: { as: 'maya', item: 'kayak' }, text: 'Maya hides the kayak' }],
+    given: [start, { step: 'loan.approved', args: { owner: 'maya', as: 'sam', item: 'guitar', from: '+4', to: '+5', ref: 'k' }, text: "Sam has Maya's guitar approved" }],
+    when: [{ step: 'item.hide', args: { as: 'maya', item: 'guitar' }, text: 'Maya hides the guitar' }],
     then: [
-      { step: 'request.submitExpectRefusal', args: { as: 'jo', item: 'kayak', from: '+9', to: '+10', status: 409 }, text: 'Jo cannot request it' },
+      { step: 'request.submitExpectRefusal', args: { as: 'jo', item: 'guitar', from: '+9', to: '+10', status: 409 }, text: 'Jo cannot request it' },
       { step: 'loan.status', args: { ref: 'k', status: 'approved' }, text: "Sam's reservation is untouched" },
     ],
     trace: { from: `${S}.Library.SetItemVisibility` },
