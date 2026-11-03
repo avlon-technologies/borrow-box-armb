@@ -1,0 +1,70 @@
+{
+  "development-package-trace": "1",
+  "normative": false,
+  "note": "derived from the compiler's process graph; declared causality only — never a runtime claim",
+  "scenario": "full-loan-journey",
+  "from": "::BorrowBox.Lending.Library.ConfirmReturn",
+  "ok": true,
+  "hops": [
+    {
+      "consumed": "::BorrowBox.Lending.Library.ConfirmReturn",
+      "participant": "::BorrowBox.Lending.Library.BorrowingService",
+      "consequence": "::BorrowBox.Lending.Library.ReturnConfirmed",
+      "receiveKind": "handles",
+      "strength": "correlated",
+      "provenance": "authored-reaction",
+      "exclusivity": "all-of",
+      "boundary": null,
+      "crossings": 0
+    },
+    {
+      "consumed": "::BorrowBox.Lending.Library.ConfirmReturn",
+      "participant": "::BorrowBox.Lending.Library.BorrowingService",
+      "consequence": "::BorrowBox.Lending.Library.ConditionRecorded",
+      "receiveKind": "handles",
+      "strength": "correlated",
+      "provenance": "authored-reaction",
+      "exclusivity": "all-of",
+      "boundary": null,
+      "crossings": 0
+    }
+  ],
+  "sinks": [
+    {
+      "participant": "::BorrowBox.Lending.Library.BorrowingService",
+      "consumed": "::BorrowBox.Lending.Library.ReturnConfirmed"
+    },
+    {
+      "participant": "::BorrowBox.Lending.Library.BorrowingService",
+      "consumed": "::BorrowBox.Lending.Library.ConditionRecorded"
+    }
+  ],
+  "openConsumptions": [],
+  "productions": [
+    {
+      "message": "::BorrowBox.Lending.Library.ReturnConfirmed",
+      "producer": "::BorrowBox.Lending.Library.BorrowingService",
+      "readModel": "::BorrowBox.Lending.Library.LoanHistory"
+    },
+    {
+      "message": "::BorrowBox.Lending.Library.ConditionRecorded",
+      "producer": "::BorrowBox.Lending.Library.BorrowingService",
+      "readModel": "::BorrowBox.Lending.Library.LoanHistory"
+    }
+  ],
+  "cycles": [],
+  "messagesReached": [
+    "::BorrowBox.Lending.Library.ConfirmReturn",
+    "::BorrowBox.Lending.Library.ReturnConfirmed",
+    "::BorrowBox.Lending.Library.ConditionRecorded"
+  ],
+  "participantsReached": [
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "weakestStrength": "correlated",
+  "declaredCausalClosure": {
+    "closed": true,
+    "meaning": "every consumption reached along declared hops carries a declaration (sinks included); NOT runtime completion, success, or that any Event occurs"
+  },
+  "expected": null
+}

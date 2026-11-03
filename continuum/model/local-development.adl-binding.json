@@ -1,0 +1,420 @@
+{
+  "adl-json": "adl-json/1.0",
+  "document": {
+    "universe": "binding",
+    "base": {
+      "package": "avlon.borrowbox",
+      "version": "cycle-1",
+      "canonicalModel": "sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42"
+    },
+    "vocabularies": [
+      {
+        "name": "avlon.borrowbox.bindings.localdevelopment",
+        "version": "cycle-1"
+      }
+    ],
+    "environment": {
+      "ref": "ad702350-32e2-4339-b1ac-eeb110b602ee",
+      "hint": "BorrowBox.LocalDevelopment"
+    },
+    "bindings": [
+      {
+        "kind": "Binding",
+        "id": "18d6852c-a9b5-40a8-bdb0-57e2e884faba",
+        "name": "B1",
+        "description": "Deployable ::BorrowBox.WebApp",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "node-process",
+          "configuration": {
+            "runtime": "node-24",
+            "entry": "server/src/index.js"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "f1ffd8e1-cd48-4333-bf53-4d2d46995e8b",
+            "hint": "BorrowBox.WebApp"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "5be48864-0f09-4ad4-8751-1541c739c3a1",
+        "name": "B2",
+        "description": "Service ::BorrowBox.Lending.Library.BorrowingService",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "in-process-module",
+          "configuration": {
+            "module": "server/src/borrowing.js"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "44a92019-ffa6-4a31-8725-29d9b823dcea",
+            "hint": "BorrowBox.Lending.Library.BorrowingService"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "faa49151-c81b-475b-a576-197844f00376",
+        "name": "B3",
+        "description": "Service ::BorrowBox.Lending.Library.CatalogService",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "in-process-module",
+          "configuration": {
+            "module": "server/src/catalog.js"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "bfe9b77a-a1ef-4afa-8bc7-49f9ed1b8c52",
+            "hint": "BorrowBox.Lending.Library.CatalogService"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "17e35d6b-891f-4f12-aeb3-7183d7ab571c",
+        "name": "B4",
+        "description": "Event ::BorrowBox.Lending.Library.ConditionRecorded",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ConditionRecorded"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "d94bb019-a6ba-4d2d-990f-2c62a7596ace",
+            "hint": "BorrowBox.Lending.Library.ConditionRecorded"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "926d2b67-68d6-4c59-ac02-8987b227367b",
+        "name": "B5",
+        "description": "Event ::BorrowBox.Lending.Library.ExtensionAccepted",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ExtensionAccepted"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "0027a1fe-e4e2-49b3-9526-86ba2bb6b6eb",
+            "hint": "BorrowBox.Lending.Library.ExtensionAccepted"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "0db41536-d482-4dde-8c67-0f38248d799b",
+        "name": "B6",
+        "description": "Event ::BorrowBox.Lending.Library.ExtensionDeclined",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ExtensionDeclined"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "7173811c-83ac-407e-a617-74e59e63d4e3",
+            "hint": "BorrowBox.Lending.Library.ExtensionDeclined"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "85466af3-4062-43a0-9f80-b773394f1add",
+        "name": "B7",
+        "description": "Event ::BorrowBox.Lending.Library.ExtensionProposed",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ExtensionProposed"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "643c33ce-8866-4cb4-9012-3d62fd94bfba",
+            "hint": "BorrowBox.Lending.Library.ExtensionProposed"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "2e099635-a4e9-4924-a824-364e653acc00",
+        "name": "B8",
+        "description": "Event ::BorrowBox.Lending.Library.ItemReadied",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ItemReadied"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "839532cd-13a6-4fab-a6d7-a8da8a9daa00",
+            "hint": "BorrowBox.Lending.Library.ItemReadied"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "32bc779b-f9c1-44be-88b4-1610e9952d8d",
+        "name": "B9",
+        "description": "Event ::BorrowBox.Lending.Library.PickupConfirmed",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "PickupConfirmed"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "59181a41-8306-4452-bf75-ffbd24ba83cf",
+            "hint": "BorrowBox.Lending.Library.PickupConfirmed"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "98036fde-c878-41f9-8247-d7f2f20a47e1",
+        "name": "B10",
+        "description": "Event ::BorrowBox.Lending.Library.RequestApproved",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "RequestApproved"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "90769a20-e020-4e7a-83bb-5b482abaab2c",
+            "hint": "BorrowBox.Lending.Library.RequestApproved"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "1f4478a6-341c-4746-857d-93e1c8cba2ec",
+        "name": "B11",
+        "description": "Event ::BorrowBox.Lending.Library.RequestCancelled",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "RequestCancelled"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "f442ac17-d48c-4aed-a458-e783a07f9bfb",
+            "hint": "BorrowBox.Lending.Library.RequestCancelled"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "df67e744-d017-41e2-8ba3-3e4d764e4b04",
+        "name": "B12",
+        "description": "Event ::BorrowBox.Lending.Library.RequestDeclined",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "RequestDeclined"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "bac7627c-21f3-4890-a81f-9513d939c8dc",
+            "hint": "BorrowBox.Lending.Library.RequestDeclined"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "8ab85310-d97d-49ea-9bec-786652cb17b7",
+        "name": "B13",
+        "description": "Event ::BorrowBox.Lending.Library.RequestSubmitted",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "RequestSubmitted"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "e6688e98-07f7-4616-a6b4-5968307e6e44",
+            "hint": "BorrowBox.Lending.Library.RequestSubmitted"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "05ce4723-9221-4c9b-ad8d-7f555b268e99",
+        "name": "B14",
+        "description": "Event ::BorrowBox.Lending.Library.ReturnConfirmed",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ReturnConfirmed"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "a16b1ae4-3ff3-4d22-9dad-c0f1ba1b2624",
+            "hint": "BorrowBox.Lending.Library.ReturnConfirmed"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "14c094e3-abb4-4bce-b904-a5f07ec1e6eb",
+        "name": "B15",
+        "description": "Event ::BorrowBox.Lending.Library.ReturnStarted",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-journal",
+          "configuration": {
+            "journal": "events",
+            "type": "ReturnStarted"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "1d774c32-273a-4341-ad95-80e2a385e4a2",
+            "hint": "BorrowBox.Lending.Library.ReturnStarted"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "2a49f568-1e0a-4652-bce5-68aa56617ad7",
+        "name": "B16",
+        "description": "Resource ::BorrowBox.Lending.Library.ActivityJournal",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-file",
+          "configuration": {
+            "file": "data/borrowbox.sqlite",
+            "table": "events"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "b002032f-35ae-4136-9cfc-4ef450751698",
+            "hint": "BorrowBox.Lending.Library.ActivityJournal"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "d8775fbf-eeb2-4caa-bd1c-33a8d717b1b0",
+        "name": "B17",
+        "description": "Resource ::BorrowBox.Lending.Library.EvidenceStore",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-file",
+          "configuration": {
+            "file": "data/borrowbox.sqlite",
+            "table": "condition_notes"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "649b08e6-f07b-4f06-a18c-7224d5ee83fb",
+            "hint": "BorrowBox.Lending.Library.EvidenceStore"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "fe306636-4323-4b21-9d6a-6c7e80ff94c5",
+        "name": "B18",
+        "description": "Resource ::BorrowBox.Lending.Library.ItemStore",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-file",
+          "configuration": {
+            "file": "data/borrowbox.sqlite",
+            "table": "items"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "6f1d9389-7b0f-445f-b9a8-a1c414658f15",
+            "hint": "BorrowBox.Lending.Library.ItemStore"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "d386923d-ae6d-4f90-80cf-b01e68814c03",
+        "name": "B19",
+        "description": "Resource ::BorrowBox.Lending.Library.PhotoStore",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "local-directory",
+          "configuration": {
+            "directory": "data/uploads"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "4c1d284c-59cb-4e2d-afbb-91295ecea94d",
+            "hint": "BorrowBox.Lending.Library.PhotoStore"
+          }
+        }
+      },
+      {
+        "kind": "Binding",
+        "id": "d6424da9-eee0-46f2-b051-30e2f4d44433",
+        "name": "B20",
+        "description": "Resource ::BorrowBox.Lending.Library.ReservationStore",
+        "attributes": {
+          "vocabulary": "avlon.borrowbox.bindings.localdevelopment",
+          "technology": "sqlite-file",
+          "configuration": {
+            "file": "data/borrowbox.sqlite",
+            "table": "reservations, extensions"
+          }
+        },
+        "relationships": {
+          "binds": {
+            "ref": "3f2d5bf6-42d8-4184-9891-59f405b64f9e",
+            "hint": "BorrowBox.Lending.Library.ReservationStore"
+          }
+        }
+      }
+    ]
+  }
+}

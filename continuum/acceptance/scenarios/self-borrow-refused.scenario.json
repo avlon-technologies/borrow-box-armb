@@ -1,0 +1,67 @@
+{
+  "acceptance-scenario": "1",
+  "name": "self-borrow-refused",
+  "purpose": "An owner cannot request their own item, and a non-owner cannot decide or cancel a request.",
+  "verifies": [
+    "::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing",
+    "::BorrowBox.EveryActionAuthorizedOnServer",
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "test": "::BorrowBox.AuthorizationTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    }
+  ],
+  "when": [
+    {
+      "step": "request.submitExpectRefusal",
+      "args": {
+        "as": "maya",
+        "item": "tent",
+        "from": "+20",
+        "to": "+21",
+        "status": 403
+      },
+      "text": "Maya asks to borrow her own tent"
+    },
+    {
+      "step": "request.submit",
+      "args": {
+        "as": "sam",
+        "item": "tent",
+        "from": "+20",
+        "to": "+21",
+        "ref": "s"
+      },
+      "text": "Sam requests Maya's tent"
+    }
+  ],
+  "then": [
+    {
+      "step": "request.actExpectRefusal",
+      "args": {
+        "as": "jo",
+        "ref": "s",
+        "action": "approve",
+        "status": 403
+      },
+      "text": "Jo, who does not own it, cannot approve"
+    },
+    {
+      "step": "request.actExpectRefusal",
+      "args": {
+        "as": "maya",
+        "ref": "s",
+        "action": "cancel",
+        "status": 403
+      },
+      "text": "Maya cannot cancel Sam's request"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.RequestToBorrow"
+  }
+}

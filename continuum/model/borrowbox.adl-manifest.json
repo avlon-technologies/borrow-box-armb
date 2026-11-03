@@ -1,0 +1,11 @@
+{
+  "adl-json": "adl-json/1.0",
+  "manifest": {
+    "name": "avlon.borrowbox",
+    "version": "cycle-1",
+    "core": "adl/1.7",
+    "imports": [],
+    "extensions": [],
+    "documents": ["borrowbox.adl"]
+  }
+}

@@ -1,0 +1,163 @@
+adl-text/0.2
+model avlon.borrowbox cycle-1 core adl/1.7
+source sha256:1631f83eecbc048520644600379ef320132af8ef0806436cb6bff032dd5eed42 (canonical-model attestation)
+
+system BorrowBox — "A warm, trustworthy lending library: people list possessions, friends request dates, and both sides coordinate handoff, use and return."
+  actor Borrower [person] | uses: ::BorrowBox — "A person who explores other people's items, requests dates and takes temporary custody. Any member may be a borrower of items they do not own."
+  actor Owner [person] | uses: ::BorrowBox — "A person who lists their own items and decides who may borrow them and when. Authority over an item comes only from owning it."
+  actor ProductTeam [team] | owns: ::BorrowBox, ::BorrowBox.Lending.Library — "The Avlon team accountable for BorrowBox and its lending rules."
+  deployable WebApp — "One locally started process serving the interface and the API over one durable store."
+  domain Lending (core) — "Temporary custody of privately owned items between people who know each other."
+    bounded-context Library | realizes: ::BorrowBox.Lending.CatalogDiscovery, ::BorrowBox.Lending.ConditionEvidence, ::BorrowBox.Lending.ItemListing, ::BorrowBox.Lending.LoanCustody, ::BorrowBox.Lending.ReservationCoordination — "The authority for items, their reservations, loans, condition evidence and the history of who did what."
+      business-rule CommittedReservationsNeverOverlap "A request may be approved only if its inclusive range overlaps no other approved, ready, borrowed or returning reservation of the same item; the check and the commit are one atomic act."
+      business-rule EvidenceIsAppendOnly "Condition evidence is only ever added; an owner who disagrees with the borrower's account records their own evidence marked as a disagreement, and both remain."
+      business-rule ExtensionRecheck "An extension may be accepted only while the loan is open and only if the days between the current and proposed due date overlap no other commitment for the item."
+      business-rule HiddenItemsTakeNoNewRequests "A request to borrow a hidden item is refused; hiding changes nothing about requests and loans already made."
+      business-rule LoanStepsInOrder "Ready follows approval, pickup follows ready, return starts only while borrowed, and confirmation follows the start of return."
+      business-rule NoSelfBorrowing "A request to borrow is refused when the requester owns the item."
+      business-rule OnlyPendingIsDecided "Approve and decline apply only to a pending request; cancel applies to the borrower's own request before pickup."
+      business-rule OverdueIsInformational "A loan whose due date is before today in the community time zone is overdue; being overdue blocks nothing about returning it."
+      business-rule RequestsFitTheCalendar "A requested range starts no earlier than today in the community time zone, ends on or after its start, and is no longer than the item's maximum loan length."
+      command AcceptExtension payload=ExtensionAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command AddConditionNote payload=ConditionReport — "Either party adds a further attributed note to a loan's condition history, for example a response to a disagreement."
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command ApproveRequest payload=ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command CancelRequest payload=ReservationAct
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      command ConfirmPickup payload=ConditionReport
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      command ConfirmReturn payload=ConditionReport
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command DeclineExtension payload=ExtensionAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command DeclineRequest payload=ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command EditItem payload=ItemChange
+        admits ::BorrowBox.Owner requires ItemOwnership for itemId
+      command ListItem payload=ItemDraft
+        admits ::BorrowBox.Owner
+      command MarkReady payload=ReservationAct
+        admits ::BorrowBox.Owner requires ItemOwnership for reservationId
+      command ProposeExtension payload=ExtensionProposal
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      command RequestToBorrow payload=BorrowRequest
+        admits ::BorrowBox.Borrower requires NonOwnership for itemId
+      command SetItemVisibility payload=VisibilityChange
+        admits ::BorrowBox.Owner requires ItemOwnership for itemId
+      command StartReturn payload=ConditionReport
+        admits ::BorrowBox.Borrower requires Borrowership for reservationId
+      event ConditionRecorded payload=ConditionRecord
+        delivery[ordered, at-least-once, durable]
+      event ExtensionAccepted payload=ExtensionRecord
+        delivery[ordered, at-least-once, durable]
+      event ExtensionDeclined payload=ExtensionRecord
+        delivery[ordered, at-least-once, durable]
+      event ExtensionProposed payload=ExtensionRecord
+        delivery[ordered, at-least-once, durable]
+      event ItemReadied payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event PickupConfirmed payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event RequestApproved payload=ReservationRecord — "The reservation is committed: its dates are now unavailable to anyone else."
+        delivery[ordered, at-least-once, durable]
+      event RequestCancelled payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event RequestDeclined payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event RequestSubmitted payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event ReturnConfirmed payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      event ReturnStarted payload=ReservationRecord
+        delivery[ordered, at-least-once, durable]
+      read-model LoanHistory | projectsFrom: ConditionRecorded, ExtensionAccepted, ExtensionDeclined, ExtensionProposed, ItemReadied, PickupConfirmed, RequestApproved, RequestCancelled, RequestDeclined, RequestSubmitted, ReturnConfirmed, ReturnStarted — "The human timeline of one reservation: both people's actions and both viewpoints on condition, in order."
+      resource ActivityJournal [data-store] — "Append-only record of every accepted action: who, what, when, on which item and reservation."
+        persistence[durable; strong]
+      resource EvidenceStore [data-store] — "Append-only condition notes and their photos, each attributed to an author, a role and a phase."
+        persistence[durable; strong]
+      resource ItemStore [data-store] — "Every listed item with its owner, rules, photo and visibility. Hiding an item is a flag, never a deletion."
+        persistence[durable; strong]
+      resource PhotoStore [object-store] — "Item and condition photographs."
+        persistence[durable]
+      resource ReservationStore [data-store] — "Every request and loan with its inclusive date range and lifecycle position, and every extension proposal. The single authority that committed reservations of one item never overlap."
+        persistence[durable; strong]
+      service BorrowingService | applies: CommittedReservationsNeverOverlap, EvidenceIsAppendOnly, ExtensionRecheck, HiddenItemsTakeNoNewRequests, LoanStepsInOrder, NoSelfBorrowing, OnlyPendingIsDecided, OverdueIsInformational, RequestsFitTheCalendar; deployedAs: ::BorrowBox.WebApp; governedBy: ::BorrowBox.CalendarDatePolicy, ::BorrowBox.ServerSideAuthorization; handles: AcceptExtension, AddConditionNote, ApproveRequest, CancelRequest, ConfirmPickup, ConfirmReturn, DeclineExtension, DeclineRequest, MarkReady, ProposeExtension, RequestToBorrow, StartReturn; projects: LoanHistory; publishes: ConditionRecorded, ExtensionAccepted, ExtensionDeclined, ExtensionProposed, ItemReadied, PickupConfirmed, RequestApproved, RequestCancelled, RequestDeclined, RequestSubmitted, ReturnConfirmed, ReturnStarted; reads: ActivityJournal, EvidenceStore, ItemStore, LoanHistory, ReservationStore; realizes: ::BorrowBox.Lending.ConditionEvidence, ::BorrowBox.Lending.LoanCustody, ::BorrowBox.Lending.ReservationCoordination; satisfies: ::BorrowBox.EveryActionAuthorizedOnServer, ::BorrowBox.Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved, ::BorrowBox.Lending.LoanCustody.HandoffIsAttributed, ::BorrowBox.Lending.LoanCustody.LateLoansRemainReturnable, ::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap, ::BorrowBox.Lending.ReservationCoordination.DecisionsFollowLifecycle, ::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts, ::BorrowBox.Lending.ReservationCoordination.NoSelfBorrowing, ::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending, ::BorrowBox.RepeatedSubmissionIsHarmless, ::BorrowBox.StateSurvivesRestart; subscribesTo: ConditionRecorded, ExtensionAccepted, ExtensionDeclined, ExtensionProposed, ItemReadied, PickupConfirmed, RequestApproved, RequestCancelled, RequestDeclined, RequestSubmitted, ReturnConfirmed, ReturnStarted; writes: ActivityJournal, EvidenceStore, PhotoStore, ReservationStore — "Decides requests, carries each loan through handoff and return, records condition evidence and extensions, and keeps the history."
+        on AcceptExtension -> all-of ExtensionAccepted correlate ExtensionAccepted payload.extensionId = payload.extensionId
+        on AddConditionNote -> all-of ConditionRecorded correlate ConditionRecorded payload.reservationId = payload.reservationId
+        on ApproveRequest -> all-of RequestApproved correlate RequestApproved payload.reservationId = payload.reservationId
+        on CancelRequest -> all-of RequestCancelled correlate RequestCancelled payload.reservationId = payload.reservationId
+        on ConditionRecorded -> none
+        on ConfirmPickup -> all-of ConditionRecorded, PickupConfirmed correlate ConditionRecorded payload.reservationId = payload.reservationId correlate PickupConfirmed payload.reservationId = payload.reservationId
+        on ConfirmReturn -> all-of ConditionRecorded, ReturnConfirmed correlate ConditionRecorded payload.reservationId = payload.reservationId correlate ReturnConfirmed payload.reservationId = payload.reservationId
+        on DeclineExtension -> all-of ExtensionDeclined correlate ExtensionDeclined payload.extensionId = payload.extensionId
+        on DeclineRequest -> all-of RequestDeclined correlate RequestDeclined payload.reservationId = payload.reservationId
+        on ExtensionAccepted -> none
+        on ExtensionDeclined -> none
+        on ExtensionProposed -> none
+        on ItemReadied -> none
+        on MarkReady -> all-of ItemReadied correlate ItemReadied payload.reservationId = payload.reservationId
+        on PickupConfirmed -> none
+        on ProposeExtension -> all-of ExtensionProposed correlate ExtensionProposed payload.reservationId = payload.reservationId
+        on RequestApproved -> none
+        on RequestCancelled -> none
+        on RequestDeclined -> none
+        on RequestSubmitted -> none
+        on RequestToBorrow -> all-of RequestSubmitted correlate RequestSubmitted payload.itemId = payload.itemId
+        on ReturnConfirmed -> none
+        on ReturnStarted -> none
+        on StartReturn -> all-of ConditionRecorded, ReturnStarted correlate ConditionRecorded payload.reservationId = payload.reservationId correlate ReturnStarted payload.reservationId = payload.reservationId
+      service CatalogService | applies: HiddenItemsTakeNoNewRequests; deployedAs: ::BorrowBox.WebApp; governedBy: ::BorrowBox.ServerSideAuthorization; handles: EditItem, ListItem, SetItemVisibility; reads: ItemStore, PhotoStore, ReservationStore; realizes: ::BorrowBox.Lending.CatalogDiscovery, ::BorrowBox.Lending.ItemListing; satisfies: ::BorrowBox.EveryActionAuthorizedOnServer, ::BorrowBox.Lending.CatalogDiscovery.CatalogShowsAvailability, ::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments, ::BorrowBox.Lending.ItemListing.OnlyOwnersShapeListings; writes: ItemStore, PhotoStore — "Accepts owners' listing changes and answers catalog searches with availability."
+        on EditItem -> none
+        on ListItem -> none
+        on SetItemVisibility -> none
+        api CatalogApi
+          operation SearchCatalog in=CatalogQuery out=CatalogPage
+      record BorrowRequest v1 { endDate: date, itemId: text, note: optional(text), startDate: date }
+      record Borrowership v1 { borrowerId: text, reservationId: text }
+      record CatalogPage v1 { items: list(ItemRecord) }
+      record CatalogQuery v1 { availableFrom: optional(date), availableTo: optional(date), category: optional(text), text: optional(text) }
+      record ConditionRecord v1 { authorId: text, disagrees: boolean, evidenceId: text, phase: text, reservationId: text }
+      record ConditionReport v1 { disagrees: boolean, note: optional(text), photoCount: int32, reservationId: text }
+      record ExtensionAct v1 { extensionId: text, reservationId: text }
+      record ExtensionProposal v1 { note: optional(text), proposedEndDate: date, reservationId: text }
+      record ExtensionRecord v1 { extensionId: text, proposedEndDate: date, reservationId: text }
+      record ItemChange v1 { category: text, description: text, itemId: text, lendingRules: text, maxLoanDays: int32, title: text }
+      record ItemDraft v1 { category: text, description: text, lendingRules: text, maxLoanDays: int32, title: text }
+      record ItemOwnership v1 { itemId: text, ownerId: text }
+      record ItemRecord v1 { hidden: boolean, itemId: text, ownerId: text, title: text }
+      record NonOwnership v1 { itemId: text, requesterId: text }
+      record ReservationAct v1 { note: optional(text), reservationId: text }
+      record ReservationRecord v1 { borrowerId: text, endDate: date, itemId: text, reservationId: text, startDate: date }
+      record VisibilityChange v1 { hidden: boolean, itemId: text }
+    capability CatalogDiscovery — "Exploring what friends are willing to lend: searching, filtering, and understanding an item's owner, rules and availability."
+      requirement CatalogShowsAvailability — "Anyone exploring the catalog can see each visible item's photo, owner, lending rules and the dates already committed. (A01)"
+    capability ConditionEvidence — "Recording how an item looked before and after a loan, from each person's own point of view."
+      requirement EvidenceIsAttributedAndPreserved — "Condition notes and photos are attributed to their author and phase, are append-only, and a disagreement between owner and borrower is preserved in the history rather than overwritten. (A07)"
+    capability ItemListing — "Offering one's own possessions for borrowing, with a picture, a description and clear borrowing rules, and withdrawing them from new borrowing."
+      requirement HiddenItemsKeepCommitments — "A hidden item accepts no new borrow requests and no longer appears to others, while reservations and loans already made for it continue unchanged. (A10)"
+      requirement OnlyOwnersShapeListings — "Only the owner of an item may edit it or change whether it accepts new requests. (A05)"
+    capability LoanCustody — "Handing an item over, keeping track of who holds it, and getting it back."
+      requirement HandoffIsAttributed — "The owner marks the item ready, the borrower confirms pickup and starts the return, and the owner confirms it is back; every step is recorded with who did it and when. (A06)"
+      requirement LateLoansRemainReturnable — "A loan past its due date is shown as overdue to both people and can still be returned normally. (A09)"
+    capability ReservationCoordination — "Agreeing who may borrow an item for which dates."
+      requirement ApprovalsNeverOverlap — "Overlapping pending requests may coexist, but no two committed reservations for one item ever overlap, even when approvals are submitted concurrently. (A04)"
+      requirement DecisionsFollowLifecycle — "Only a pending request may be approved or declined, only by the item's owner; only its borrower may cancel it; any other transition is refused. (A03)"
+      requirement ExtensionsRecheckConflicts — "A borrower may propose a later due date; only the owner may accept it, and acceptance re-checks the extended days against every other commitment. (A08)"
+      requirement NoSelfBorrowing — "No one may request to borrow an item they own. (A05)"
+      requirement RequestsPersistAsPending — "A borrower requests an inclusive date range with an optional note, and the request is durably pending until the owner decides or the borrower cancels. (A02)"
+  environment LocalDevelopment — "An evaluator's or developer's machine."
+  policy CalendarDatePolicy
+  policy ServerSideAuthorization
+  requirement EveryActionAuthorizedOnServer — "Every state-changing action is authorized against the acting person's relationship to the item or reservation on the server; the interface hiding a button is never the control. (A05)"
+  requirement RepeatedSubmissionIsHarmless — "Submitting the same action twice (double click, retry, refresh) produces one effect, never a duplicate request, evidence entry or transition."
+  requirement StateSurvivesRestart — "Items, reservations, loans, evidence and history persist durably across restarts, and the demo seed is repeatable. (A11)"
+  test ApprovalConcurrencyTests | verifies: Lending.Library.BorrowingService, Lending.ReservationCoordination.ApprovalsNeverOverlap — "Overlapping pending requests coexist; concurrent approvals of overlapping requests, in one process and across processes, commit exactly one."
+  test AuthorizationTests | verifies: EveryActionAuthorizedOnServer, Lending.Library.BorrowingService, Lending.Library.CatalogService — "Every command refused for the wrong person, and for no identity."
+  test CatalogAndListingTests | verifies: Lending.CatalogDiscovery.CatalogShowsAvailability, Lending.ItemListing.HiddenItemsKeepCommitments, Lending.ItemListing.OnlyOwnersShapeListings, Lending.Library.CatalogService — "Catalog search, item detail with availability, owner-only edit and hide, hidden items refuse new requests but keep reservations."
+  test ExtensionTests | verifies: Lending.Library.BorrowingService, Lending.ReservationCoordination.ExtensionsRecheckConflicts — "Extension proposal, owner-only acceptance, and the collision recheck at acceptance."
+  test HandoffAndEvidenceTests | verifies: Lending.ConditionEvidence.EvidenceIsAttributedAndPreserved, Lending.Library.BorrowingService, Lending.LoanCustody.HandoffIsAttributed, Lending.LoanCustody.LateLoansRemainReturnable — "Ready, pickup, return, confirmation with attributed history; separate owner and borrower evidence and a preserved disagreement; overdue loans returnable."
+  test PersistenceAndIdempotencyTests | verifies: Lending.Library.BorrowingService, RepeatedSubmissionIsHarmless, StateSurvivesRestart — "State survives a server restart over the same store; a repeated submission with the same key has one effect."
+  test RequestLifecycleTests | verifies: Lending.Library.BorrowingService, Lending.ReservationCoordination.DecisionsFollowLifecycle, Lending.ReservationCoordination.NoSelfBorrowing, Lending.ReservationCoordination.RequestsPersistAsPending — "Request, approve, decline, cancel, refused transitions and self-borrowing."

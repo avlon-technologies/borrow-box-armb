@@ -1,0 +1,59 @@
+{
+  "acceptance-scenario": "1",
+  "name": "state-survives-restart",
+  "purpose": "A pending request survives a restart, and a repeated submission with one key creates one request.",
+  "verifies": [
+    "::BorrowBox.StateSurvivesRestart",
+    "::BorrowBox.RepeatedSubmissionIsHarmless",
+    "::BorrowBox.Lending.ReservationCoordination.RequestsPersistAsPending",
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "test": "::BorrowBox.PersistenceAndIdempotencyTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    }
+  ],
+  "when": [
+    {
+      "step": "request.submitTwiceSameKey",
+      "args": {
+        "as": "sam",
+        "item": "tent",
+        "from": "+30",
+        "to": "+31",
+        "ref": "p"
+      },
+      "text": "Sam's request is sent twice with the same key"
+    },
+    {
+      "step": "system.restart",
+      "text": "the library restarts"
+    }
+  ],
+  "then": [
+    {
+      "step": "request.countFor",
+      "args": {
+        "as": "sam",
+        "item": "tent",
+        "from": "+30",
+        "count": 1
+      },
+      "text": "there is exactly one such request"
+    },
+    {
+      "step": "loan.status",
+      "args": {
+        "ref": "p",
+        "status": "pending"
+      },
+      "text": "it is still pending"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.RequestToBorrow"
+  }
+}

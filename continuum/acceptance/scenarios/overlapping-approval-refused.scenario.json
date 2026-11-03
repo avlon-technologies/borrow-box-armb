@@ -1,0 +1,67 @@
+{
+  "acceptance-scenario": "1",
+  "name": "overlapping-approval-refused",
+  "purpose": "Two overlapping pending requests may coexist, but approving both is refused; concurrent approvals commit exactly one.",
+  "verifies": [
+    "::BorrowBox.Lending.ReservationCoordination.ApprovalsNeverOverlap",
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "test": "::BorrowBox.ApprovalConcurrencyTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    },
+    {
+      "step": "request.submit",
+      "args": {
+        "as": "sam",
+        "item": "tent",
+        "from": "+10",
+        "to": "+13",
+        "ref": "a"
+      },
+      "text": "Sam requests Maya's tent for days 10-13"
+    },
+    {
+      "step": "request.submit",
+      "args": {
+        "as": "jo",
+        "item": "tent",
+        "from": "+12",
+        "to": "+15",
+        "ref": "b"
+      },
+      "text": "Jo requests Maya's tent for days 12-15"
+    }
+  ],
+  "when": [
+    {
+      "step": "request.approveConcurrently",
+      "args": {
+        "as": "maya",
+        "refs": [
+          "a",
+          "b"
+        ]
+      },
+      "text": "Maya approves both at the same moment"
+    }
+  ],
+  "then": [
+    {
+      "step": "request.exactlyOneApproved",
+      "args": {
+        "refs": [
+          "a",
+          "b"
+        ]
+      },
+      "text": "exactly one is approved and the other is still pending"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.ApproveRequest"
+  }
+}

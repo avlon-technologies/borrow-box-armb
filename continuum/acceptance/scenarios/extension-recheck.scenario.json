@@ -1,0 +1,93 @@
+{
+  "acceptance-scenario": "1",
+  "name": "extension-recheck",
+  "purpose": "An extension that would collide with a later commitment is refused on acceptance; one that fits is accepted.",
+  "verifies": [
+    "::BorrowBox.Lending.ReservationCoordination.ExtensionsRecheckConflicts",
+    "::BorrowBox.Lending.Library.BorrowingService"
+  ],
+  "test": "::BorrowBox.ExtensionTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    },
+    {
+      "step": "loan.borrowed",
+      "args": {
+        "owner": "maya",
+        "as": "sam",
+        "item": "projector",
+        "from": "+0",
+        "to": "+3",
+        "ref": "x"
+      },
+      "text": "Sam holds Maya's projector until day 3"
+    },
+    {
+      "step": "loan.approved",
+      "args": {
+        "owner": "maya",
+        "as": "jo",
+        "item": "projector",
+        "from": "+6",
+        "to": "+8",
+        "ref": "y"
+      },
+      "text": "Jo has it approved from day 6"
+    }
+  ],
+  "when": [
+    {
+      "step": "extension.propose",
+      "args": {
+        "as": "sam",
+        "ref": "x",
+        "to": "+7",
+        "ext": "e1"
+      },
+      "text": "Sam asks to keep it until day 7"
+    }
+  ],
+  "then": [
+    {
+      "step": "extension.acceptExpectRefusal",
+      "args": {
+        "as": "maya",
+        "ext": "e1",
+        "status": 409
+      },
+      "text": "Maya's acceptance is refused because of Jo"
+    },
+    {
+      "step": "extension.propose",
+      "args": {
+        "as": "sam",
+        "ref": "x",
+        "to": "+5",
+        "ext": "e2"
+      },
+      "text": "Sam asks for day 5 instead"
+    },
+    {
+      "step": "extension.accept",
+      "args": {
+        "as": "maya",
+        "ext": "e2"
+      },
+      "text": "Maya accepts"
+    },
+    {
+      "step": "loan.dueDate",
+      "args": {
+        "ref": "x",
+        "date": "+5"
+      },
+      "text": "the loan is now due on day 5"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.AcceptExtension"
+  }
+}

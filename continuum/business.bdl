@@ -2,22 +2,433 @@ model {
   bdl         1.0
   types       adl-type/1.0
   expressions adl-expr/1.0
-  definition  "2026-11-02.1"
+  definition  "2026-11-02.2"
 }
+
 business BorrowBoxBusiness #b-1001 {
   description "People lend their possessions through shared understanding of availability, responsibility and returns."
-  purpose { "make borrowing between friends effortless and accountable" }
+  purpose {
+    "make borrowing between friends effortless and accountable"
+    "keep both people's account of a loan, so trust never depends on one side's memory"
+  }
   modality { epistemic stated }
   provenance { source domain-expert, assertedBy "BorrowBox vision", assertedOn 2026-11-02 }
+
   domain Lending #d-1001 {
     purpose { "coordinate temporary custody of privately owned items" }
+
+    capability OfferItems #c-1003 {
+      purpose { "offer one's own possessions for borrowing under clear rules, and withdraw them from new borrowing" }
+    }
+
     capability ReserveItem #c-1001 {
       purpose { "request and authorize borrowing for selected dates" }
     }
+
+    capability HandOver #c-1004 {
+      purpose { "move custody of an item from its owner to the borrower" }
+    }
+
     capability ReturnItem #c-1002 {
       purpose { "restore custody and record return condition" }
     }
+
+    obligation ReturnBorrowedItem [internal-commitment] #o-1001 {
+      borneBy Borrower
+      activatedBy PickupConfirmed
+      dischargedBy ReturnConfirmed
+      statement "A borrower who has picked an item up brings it back to its owner, by the agreed due date where possible and late if not."
+      timing { "by the due date, inclusive, in the community's time zone" }
+    }
+
+    value DateRange #v-1001 {
+      startDate: date
+      endDate: date
+    }
+
+    entity Person #en-1001 {
+      identity handle
+      handle: text
+      displayName: text
+    }
+
+    entity Item #en-1002 {
+      identity itemId
+      itemId: text
+      owner: Person
+      title: text
+      lendingRules: text
+      maxLoanDays: int32
+      listing: ListingStatus
+
+      state-model ListingLifecycle for listing #sm-1001 {
+        initial Listed
+
+        transition Hide #t-1001 {
+          from Listed
+          to Hidden
+          triggeredBy HideItem
+          produces ItemHidden
+        }
+
+        transition Show #t-1002 {
+          from Hidden
+          to Listed
+          triggeredBy ShowItem
+          produces ItemShown
+        }
+      }
+    }
+
+    entity Reservation #en-1003 {
+      identity reservationId
+      reservationId: text
+      item: Item
+      borrower: Person
+      period: DateRange
+      status: ReservationStatus
+
+      state-model ReservationLifecycle for status #sm-1002 {
+        initial Pending
+        terminal Declined Cancelled Returned
+
+        transition Approve #t-1011 {
+          from Pending
+          to Approved
+          triggeredBy ApproveRequest
+          produces RequestApproved
+        }
+
+        transition Decline #t-1012 {
+          from Pending
+          to Declined
+          triggeredBy DeclineRequest
+          produces RequestDeclined
+        }
+
+        transition CancelPending #t-1013 {
+          from Pending
+          to Cancelled
+          triggeredBy CancelRequest
+          produces RequestCancelled
+        }
+
+        transition CancelApproved #t-1014 {
+          from Approved
+          to Cancelled
+          triggeredBy CancelRequest
+          produces RequestCancelled
+        }
+
+        transition MakeReady #t-1015 {
+          from Approved
+          to Ready
+          triggeredBy MarkReady
+          produces ItemReadied
+        }
+
+        transition CancelReady #t-1016 {
+          from Ready
+          to Cancelled
+          triggeredBy CancelRequest
+          produces RequestCancelled
+        }
+
+        transition Pickup #t-1017 {
+          from Ready
+          to Borrowed
+          triggeredBy ConfirmPickup
+          produces PickupConfirmed
+        }
+
+        transition BeginReturn #t-1018 {
+          from Borrowed
+          to Returning
+          triggeredBy StartReturn
+          produces ReturnStarted
+        }
+
+        transition CompleteReturn #t-1019 {
+          from Returning
+          to Returned
+          triggeredBy ConfirmReturn
+          produces ReturnConfirmed
+          requires ReturnStarted
+        }
+      }
+    }
+
+    entity Extension #en-1004 {
+      identity extensionId
+      extensionId: text
+      reservation: Reservation
+      proposedEndDate: date
+      decision: ExtensionStatus
+
+      state-model ExtensionLifecycle for decision #sm-1003 {
+        initial Proposed
+        terminal Accepted Declined
+
+        transition AcceptIt #t-1021 {
+          from Proposed
+          to Accepted
+          triggeredBy AcceptExtension
+          produces ExtensionAccepted
+        }
+
+        transition DeclineIt #t-1022 {
+          from Proposed
+          to Declined
+          triggeredBy DeclineExtension
+          produces ExtensionDeclined
+        }
+      }
+    }
+
+    entity ConditionNote #en-1005 {
+      description "One person's account of an item's condition at one moment of a loan. Never edited; a later account is a new note."
+      identity noteId
+      noteId: text
+      reservation: Reservation
+      author: Person
+      phase: ConditionPhase
+      disagrees: boolean
+    }
+
+    enum ListingStatus #e-1001 { Listed Hidden }
+    enum ReservationStatus #e-1002 { Pending Approved Declined Cancelled Ready Borrowed Returning Returned }
+    enum ExtensionStatus #e-1003 { Proposed Accepted Declined }
+    enum ConditionPhase #e-1004 { Handoff Return Followup }
+
+    action ListItem [permitted] #ac-1001 {
+      mayPerform Owner
+      exercises OfferItems
+      creates Item
+      produces ItemListed
+      outcome { Item.listing == ListingStatus "Listed" }
+    }
+
+    action EditItem [permitted] #ac-1002 {
+      mayPerform Owner
+      exercises OfferItems
+      targets Item
+      changes Item
+    }
+
+    action HideItem [permitted] #ac-1003 {
+      description "Withdraws the item from new borrowing. Reservations already made are untouched."
+      mayPerform Owner
+      exercises OfferItems
+      targets Item
+      changes Item
+      produces ItemHidden
+      precondition { Item.listing == ListingStatus "Listed" }
+    }
+
+    action ShowItem [permitted] #ac-1004 {
+      mayPerform Owner
+      exercises OfferItems
+      targets Item
+      changes Item
+      produces ItemShown
+      precondition { Item.listing == ListingStatus "Hidden" }
+    }
+
+    action RequestToBorrow [permitted] #ac-1005 {
+      mayPerform Borrower
+      exercises ReserveItem
+      targets Item
+      creates Reservation
+      produces RequestSubmitted
+      precondition { Item.listing == ListingStatus "Listed" }
+      outcome { Reservation.status == ReservationStatus "Pending" }
+    }
+
+    action ApproveRequest [permitted] #ac-1006 {
+      description "The owner commits the dates. Only possible while no other commitment for the item overlaps them."
+      mayPerform Owner
+      exercises ReserveItem
+      targets Reservation
+      changes Reservation
+      produces RequestApproved
+      precondition { Reservation.status == ReservationStatus "Pending" }
+    }
+
+    action DeclineRequest [permitted] #ac-1007 {
+      mayPerform Owner
+      exercises ReserveItem
+      targets Reservation
+      changes Reservation
+      produces RequestDeclined
+      precondition { Reservation.status == ReservationStatus "Pending" }
+    }
+
+    action CancelRequest [permitted] #ac-1008 {
+      description "The borrower changes their mind before taking the item."
+      mayPerform Borrower
+      exercises ReserveItem
+      targets Reservation
+      changes Reservation
+      produces RequestCancelled
+    }
+
+    action MarkReady [permitted] #ac-1009 {
+      mayPerform Owner
+      exercises HandOver
+      targets Reservation
+      changes Reservation
+      produces ItemReadied
+      precondition { Reservation.status == ReservationStatus "Approved" }
+    }
+
+    action ConfirmPickup [permitted] #ac-1010 {
+      mayPerform Borrower
+      exercises HandOver
+      targets Reservation
+      changes Reservation
+      produces PickupConfirmed
+      precondition { Reservation.status == ReservationStatus "Ready" }
+    }
+
+    action StartReturn [permitted] #ac-1011 {
+      description "Allowed whether or not the loan is overdue."
+      mayPerform Borrower
+      exercises ReturnItem
+      targets Reservation
+      changes Reservation
+      produces ReturnStarted
+      precondition { Reservation.status == ReservationStatus "Borrowed" }
+    }
+
+    action ConfirmReturn [permitted] #ac-1012 {
+      mayPerform Owner
+      exercises ReturnItem
+      targets Reservation
+      changes Reservation
+      produces ReturnConfirmed
+      requires ReturnStarted
+      precondition { Reservation.status == ReservationStatus "Returning" }
+    }
+
+    action RecordCondition [permitted] #ac-1013 {
+      description "Either person adds their own account of the item's condition. Each account stands beside the other."
+      mayPerform Owner Borrower
+      exercises ReturnItem
+      targets Reservation
+      creates ConditionNote
+      produces ConditionRecorded
+    }
+
+    action ProposeExtension [permitted] #ac-1014 {
+      mayPerform Borrower
+      exercises ReserveItem
+      targets Reservation
+      creates Extension
+      produces ExtensionProposed
+      outcome { Extension.decision == ExtensionStatus "Proposed" }
+    }
+
+    action AcceptExtension [permitted] #ac-1015 {
+      mayPerform Owner
+      exercises ReserveItem
+      targets Extension
+      changes Extension
+      produces ExtensionAccepted
+      precondition { Extension.decision == ExtensionStatus "Proposed" }
+    }
+
+    action DeclineExtension [permitted] #ac-1016 {
+      mayPerform Owner
+      exercises ReserveItem
+      targets Extension
+      changes Extension
+      produces ExtensionDeclined
+      precondition { Extension.decision == ExtensionStatus "Proposed" }
+    }
+
+    action OverwriteConditionNote [forbidden] #ac-1017 {
+      description "Named so a reader finds it: nobody, owner included, may change or remove another person's account of condition."
+      targets ConditionNote
+    }
+
+    action BorrowOwnItem [forbidden] #ac-1018 {
+      description "Named so a reader finds it: an owner never requests their own item."
+      targets Item
+    }
+
+    fact ItemListed #f-1001 { item: text }
+    fact ItemHidden #f-1002 { item: text }
+    fact ItemShown #f-1003 { item: text }
+    fact RequestSubmitted #f-1004 { reservation: text, period: DateRange }
+    fact RequestApproved #f-1005 { reservation: text }
+    fact RequestDeclined #f-1006 { reservation: text }
+    fact RequestCancelled #f-1007 { reservation: text }
+    fact ItemReadied #f-1008 { reservation: text }
+    fact PickupConfirmed #f-1009 { reservation: text }
+    fact ReturnStarted #f-1010 { reservation: text }
+    fact ReturnConfirmed #f-1011 { reservation: text }
+    fact ExtensionProposed #f-1012 { reservation: text, proposedEndDate: date }
+    fact ExtensionAccepted #f-1013 { reservation: text, newEndDate: date }
+    fact ExtensionDeclined #f-1014 { reservation: text }
+    fact ConditionRecorded #f-1015 { reservation: text, author: text, disagrees: boolean }
+
+    rule HiddenItemsTakeNoRequests #r-1001 {
+      scope RequestToBorrow
+      condition Item.listing == ListingStatus "Hidden"
+      assertion "the request is refused; nothing already reserved or borrowed changes"
+    }
+
+    rule ExtensionMustFit #r-1002 {
+      scope AcceptExtension
+      condition Extension.decision == ExtensionStatus "Proposed"
+      assertion "the extended days must overlap no other commitment for the item, checked when the owner accepts"
+    }
+
+    rule OverdueStillReturns #r-1003 {
+      scope Reservation.ReservationLifecycle.BeginReturn
+      condition Reservation.status == ReservationStatus "Borrowed"
+      assertion "being past the due date never prevents a return; it is shown as overdue"
+    }
+
+    invariant RangeIsOrdered [element-scoped] #i-1001 {
+      governs DateRange
+      assertion DateRange.startDate <= DateRange.endDate
+    }
+
+    invariant NoOverlappingCommitments [population-scoped] #i-1002 {
+      description "Population-scoped: the guarantee that makes approval trustworthy. Pending requests may overlap freely."
+      governs Reservation
+      assertion "Two reservations of the same item that are Approved, Ready, Borrowed or Returning never share a calendar day."
+    }
+
+    invariant OwnerNeverBorrowsOwnItem [element-scoped] #i-1003 {
+      governs Reservation
+      assertion Reservation.borrower != Reservation.item.owner
+    }
+
+    unspecified DamageResolution #u-1001 {
+      modality { epistemic underspecified }
+      questions ConfirmReturn
+      question "When owner and borrower disagree about condition, how is it settled?"
+      reason "BorrowBox records both accounts and the disagreement; settling it is between the people and outside V1, which has no payments or insurance."
+      accountable "BorrowBox vision"
+      alternatives
+        "the people settle it themselves, using the preserved history"
+        "a community mediator decides"
+    }
   }
-  actor Owner [person] #a-1001 { }
-  actor Borrower [person] #a-1002 { }
+
+  actor Member [person] #a-1003 {
+    description "Anyone in the circle of friends. Every member may both lend and borrow."
+  }
+
+  actor Owner [person] #a-1001 {
+    description "A member acting as the owner of a particular item."
+    specializes Member
+  }
+
+  actor Borrower [person] #a-1002 {
+    description "A member acting as the borrower on a particular reservation, never of their own item."
+    specializes Member
+  }
 }

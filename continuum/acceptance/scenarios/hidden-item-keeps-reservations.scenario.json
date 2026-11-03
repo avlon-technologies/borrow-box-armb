@@ -1,0 +1,63 @@
+{
+  "acceptance-scenario": "1",
+  "name": "hidden-item-keeps-reservations",
+  "purpose": "Hiding an item refuses new requests while an existing approved reservation stays approved.",
+  "verifies": [
+    "::BorrowBox.Lending.ItemListing.HiddenItemsKeepCommitments",
+    "::BorrowBox.Lending.Library.CatalogService"
+  ],
+  "test": "::BorrowBox.CatalogAndListingTests",
+  "environment": "LocalDevelopment",
+  "given": [
+    {
+      "step": "system.start",
+      "text": "the library is running with the demo seed"
+    },
+    {
+      "step": "loan.approved",
+      "args": {
+        "owner": "maya",
+        "as": "sam",
+        "item": "kayak",
+        "from": "+4",
+        "to": "+5",
+        "ref": "k"
+      },
+      "text": "Sam has Maya's kayak approved"
+    }
+  ],
+  "when": [
+    {
+      "step": "item.hide",
+      "args": {
+        "as": "maya",
+        "item": "kayak"
+      },
+      "text": "Maya hides the kayak"
+    }
+  ],
+  "then": [
+    {
+      "step": "request.submitExpectRefusal",
+      "args": {
+        "as": "jo",
+        "item": "kayak",
+        "from": "+9",
+        "to": "+10",
+        "status": 409
+      },
+      "text": "Jo cannot request it"
+    },
+    {
+      "step": "loan.status",
+      "args": {
+        "ref": "k",
+        "status": "approved"
+      },
+      "text": "Sam's reservation is untouched"
+    }
+  ],
+  "trace": {
+    "from": "::BorrowBox.Lending.Library.SetItemVisibility"
+  }
+}
